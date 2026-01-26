@@ -75,9 +75,11 @@ class EdgeServer(ComponentManager, Agent):
         self.disk = disk  #ssd
         self.memory = memory #RAM
         self.bw = bw
-        self.cpu_CompCabality  = Cabability["cpu"]
-        self.gpu_CompCabality  = Cabability["gpu"]
-        self.gpu_CompCabality  = Cabability["pcie"]
+        
+        self.Cabability = Cabability
+        self.cpu_CompCabality  = self.Cabability["cpu"]
+        self.gpu_CompCabality  = self.Cabability["gpu"]
+        self.gpu_CompCabality  = self.Cabability["pcie"]
 
         
         # Edge server demand

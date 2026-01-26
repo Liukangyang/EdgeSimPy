@@ -20,12 +20,12 @@ def User_step(self):
         current_step = self.model.schedule.steps
         for app in self.applications:
             last_access = self.access_patterns[str(app.id)].history[-1]
-            #将当前需部署应用的服务加入到仿真器服务调度队列当中############
+            #将当前需部署应用的服务加入到仿真器服务调度队列当�?############
             if app.status == "init" and current_step >= app.start_time:
                 for service in app.services:
                     self.model.current_services.append(service)
                 app.status = "wait"
-            # 遍历应用状态
+            # 遍历应用状�?
             elif app.status == "wait":
                     if len([s for s in app.services if s._available]) == len(app.services):
                         #TODO:service的可用性需要在服务传输完成后更新，并计算应用的完整时延
@@ -58,7 +58,7 @@ def Application_Step(self):
         if any(service._Service__migrations[-1]["status"]=="finished" for service in self.services):
             self.state = "finished"
 
-#服务步进：实现服务部署/迁移的状态转化
+#服务步进：实现服务部�?/迁移的状态转�?
 def Service_Step(self):
     if len(self._Service__migrations) > 0 and self._Service__migrations[-1]["end"] == None:
         migration = self._Service__migrations[-1]
@@ -74,7 +74,7 @@ def Service_Step(self):
         
         #流量下载完成
         if migration["status"] == "pulling_layers" and self.finished_flag:
-            #迁移：假设服务只从用户产生，不会占用本地服务器资源
+            #迁移：假设服务只从用户产生，不会占用本地服务器资�?
             """
             if self.server:
                     self.server.cpu_demand -= self.cpu_demand
@@ -94,7 +94,7 @@ def Service_Step(self):
         elif migration["status"] == "migrating_service_state":
                 migration["migrating_service_state_time"] += 1
                 
-        if migration["status"] == "finished" and  not migration["updated"]: #服务已完成
+        if migration["status"] == "finished" and  not migration["updated"]: #服务已完�?
                 migration["end"] = self.model.schedule.steps 
                 migration["updated"] = True
                 
@@ -113,7 +113,7 @@ def Service_Step(self):
                 self._available = True  #服务可用 
                 self.being_provisioned = False
                 
-                #更新用户访问的路径
+                #更新用户访问的路�?
                 # Changing the routes used to communicate the application that owns the service to its users
                 app = self.application
                 users = app.users
@@ -154,7 +154,7 @@ def Service_Provision(self,target_server: object):
             }
         )
                     
-# 网络流传输
+# 网络流传�?
 def NetworkFlow_Step(self):
        if self.status == "active":
             # Updating the flow progress according to the available bandwidth
@@ -193,27 +193,27 @@ def NetworkFlow_Step(self):
                     service = self.metadata["object"]
                     service._Service__migrations[-1]["status"] = "finished"   
 
-# 资源池步进
+# 资源池步�?
 def EdgeServer_Step(self):
     while(self.waiting_queue) > 0 and len(self.download_queue) < self.max_concurrent_layer_downloads:
         unload_service = self.waiting_queue.pop(0)
 
         #寻找路径
-        # 为该服务创建网络流
+        # 为该服务创建网络�?
         flow = NetworkFlow(
                 topology=self.model.topology,
-                source=unload_service.src,  #服务源节点
-                target=self, #目标为该服务器
+                source=unload_service.src,  #服务源节�?
+                target=self, #目标为该服务�?
                 start=self.model.schedule.steps + 1,
-                path=unload_service.path, #传输路径由服务对象提供，由调度函数在调度时实现路径计算
+                path=unload_service.path, #传输路径由服务对象提供，由调度函数在调度时实现路径计�?
                 data_to_transfer=unload_service.ssd_size,
                 metadata={"type": "service", "object": unload_service},
             )
         self.model.initialize_agent(agent=flow)
-        #将流量加入到目标服务器的下载队列中
+        #将流量加入到目标服务器的下载队列�?
         self.download_queue.append(flow) 
 
-#资源池判断是否有足够的资源
+#资源池判断是否有足够的资�?
 def has_capacity_to_host(self,service:object)-> bool:
         # Calculating the edge server's free resources
         free_cpu = self.cpu - self.cpu_demand
@@ -245,9 +245,9 @@ def Simulator_Step(self):
     self.resource_management_algorithm_parameters["current_step"] = self.schedule.steps + 1
 
 
-# 自定义调度算法
+# 自定义调度算�?
 def My_Schedule(parameters:dict):
-    #1.遍历可部署服务列表
+    #1.遍历可部署服务列�?
     for service in parameters["current_services"]:
         #2.寻找适合的服务器
         for server in EdgeServer.All():

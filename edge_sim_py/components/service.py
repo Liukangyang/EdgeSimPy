@@ -66,7 +66,7 @@ class Service(ComponentManager, Agent):
         self.gpu_demand = gpu_demand
         self.ssd_size = ssd_size #SSD
         self.memory_demand = memory_demand #RAM
-        self.bw_demand = bw_demand  #带宽需求
+        self.bw_demand = bw_demand  #MB
 
         #Service src node
         #
