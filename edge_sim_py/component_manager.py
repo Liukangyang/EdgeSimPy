@@ -9,7 +9,6 @@ Example:
 import os
 import json
 
-
 class ComponentManager:
     """This class provides auxiliary methods that facilitate object manipulation."""
 

@@ -24,8 +24,12 @@ class Service(ComponentManager, Agent):
         obj_id: int = None,
         image_digest: str = "",
         label: str = "",
+        flops_load: int = 0,
         cpu_demand: int = 0,
+        gpu_demand: int = 0,
+        ssd_size: int = 0,
         memory_demand: int = 0,
+        bw_demand: int = 0,
         state: int = 0,
     ) -> object:
         """Creates a Service object.
@@ -57,9 +61,20 @@ class Service(ComponentManager, Agent):
         self.image_digest = image_digest
 
         # Service demand
+        self.flops_load = flops_load #工作负载(flops)
         self.cpu_demand = cpu_demand
-        self.memory_demand = memory_demand
+        self.gpu_demand = gpu_demand
+        self.ssd_size = ssd_size #SSD
+        self.memory_demand = memory_demand #RAM
+        self.bw_demand = bw_demand  #带宽需求
 
+        #Service src node
+        #
+        self.src = self.application.users[0].base_station.network_switch if self.application else None
+        
+        #Service's tranport path
+        self.path = None
+          
         # Service state
         self.state = state
 
@@ -71,6 +86,9 @@ class Service(ComponentManager, Agent):
 
         # List of users that access the service
         self.users = []
+        
+        #finished_delay
+        self.delay = 0
 
         # Service availability and provisioning status
         self._available = False  # Service is not available, for example, when its state is being transferred
@@ -78,10 +96,13 @@ class Service(ComponentManager, Agent):
 
         # List that stores metadata about each migration experienced by the service throughout the simulation
         self.__migrations = []
+        self.finished_flag = False
 
         # Model-specific attributes (defined inside the model's "initialize()" method)
         self.model = None
         self.unique_id = None
+        
+           
 
     def _to_dict(self) -> dict:
         """Method that overrides the way the object is formatted to JSON."
@@ -95,9 +116,13 @@ class Service(ComponentManager, Agent):
                 "label": self.label,
                 "state": self.state,
                 "_available": self._available,
+                "flops_load": self.flops_load,
                 "cpu_demand": self.cpu_demand,
+                "gpu_demand": self.gpu_demand,
+                "ssd_demand": self.ssd_size,
                 "memory_demand": self.memory_demand,
-                "image_digest": self.image_digest,
+                "bw_demand": self.bw_demand,
+                #"image_digest": self.image_digest,
             },
             "relationships": {
                 "application": {"class": type(self.application).__name__, "id": self.application.id},
@@ -124,6 +149,7 @@ class Service(ComponentManager, Agent):
                 "waiting": self._Service__migrations[-1]["waiting_time"],
                 "pulling": self._Service__migrations[-1]["pulling_layers_time"],
                 "migr_state": self._Service__migrations[-1]["migrating_service_state_time"],
+                "delay":self.delay,
             }
         else:
             last_migration = None
@@ -309,5 +335,6 @@ class Service(ComponentManager, Agent):
                 "waiting_time": 0,
                 "pulling_layers_time": 0,
                 "migrating_service_state_time": 0,
+                "updated":False,
             }
         )

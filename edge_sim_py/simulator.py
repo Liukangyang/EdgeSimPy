@@ -39,6 +39,7 @@ class Simulator(ComponentManager, Model):
         scheduler: Callable = DefaultScheduler,
         dump_interval: int = 100,
         logs_directory: str = "logs",
+        resource_need:list = []
     ) -> object:
         """Creates a Simulator object.
 
@@ -117,6 +118,12 @@ class Simulator(ComponentManager, Model):
 
         # Adding the new object to the list of instances of its class
         self.__class__._instances.append(self)
+        
+        # resource needed
+        self.resources_list = resource_need
+        
+        # current service needed to place
+        self.current_services = [] 
 
     def initialize(self, input_file: str) -> None:
         """Sets up the initial values for state variables, which includes, e.g., loading components from a dataset file.
@@ -164,6 +171,7 @@ class Simulator(ComponentManager, Model):
         components = []
 
         # Creating the topology object and storing a reference to it as an attribute of the Simulator instance
+        #创建拓扑
         topology = self.initialize_agent(agent=Topology())
         self.topology = topology
 
@@ -171,7 +179,9 @@ class Simulator(ComponentManager, Model):
         for key in data.keys():
             if key != "Simulator" and key != "Topology":
                 for object_metadata in data[key]:
+                    #根据属性字典创建对象
                     new_component = globals()[key]._from_dict(dictionary=object_metadata["attributes"])
+                    #保存依赖关系
                     new_component.relationships = object_metadata["relationships"]
 
                     if hasattr(new_component, "model") and hasattr(new_component, "unique_id"):
@@ -180,6 +190,7 @@ class Simulator(ComponentManager, Model):
                     components.append(new_component)
 
         # Defining relationships between components
+        # 定义组件间的依赖关系
         for component in components:
             for key, value in component.relationships.items():
                 # Defining attributes referencing callables (i.e., functions and methods)

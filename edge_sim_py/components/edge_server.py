@@ -27,9 +27,12 @@ class EdgeServer(ComponentManager, Agent):
         coordinates: tuple = None,
         model_name: str = "",
         cpu: int = 0,
+        gpu: int = 0,
+        bw: int = 0,
         memory: int = 0,
         disk: int = 0,
         power_model: typing.Callable = None,
+        Cabability: dict = {}
     ) -> object:
         """Creates an EdgeServer object.
 
@@ -68,13 +71,30 @@ class EdgeServer(ComponentManager, Agent):
 
         # Edge server capacity
         self.cpu = cpu
-        self.memory = memory
-        self.disk = disk
+        self.gpu = gpu
+        self.disk = disk  #ssd
+        self.memory = memory #RAM
+        self.bw = bw
+        self.cpu_CompCabality  = Cabability["cpu"]
+        self.gpu_CompCabality  = Cabability["gpu"]
+        self.gpu_CompCabality  = Cabability["pcie"]
 
+        
         # Edge server demand
         self.cpu_demand = 0
-        self.memory_demand = 0
+        self.gpu_demand = 0
         self.disk_demand = 0
+        self.memory_demand = 0
+        self.bw_demand = 0
+        
+        # resource used ratio
+        self.resource_used_ratio={
+            "cpu":0,
+            "gpu":0,
+            "disk":0,
+            "memory":0,
+            "bw":0,
+        }
 
         # Edge server's availability status
         self.available = True

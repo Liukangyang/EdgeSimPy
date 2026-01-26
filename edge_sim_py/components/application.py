@@ -13,7 +13,7 @@ class Application(ComponentManager, Agent):
     _instances = []
     _object_count = 0
 
-    def __init__(self, obj_id: int = None, label: str = "") -> object:
+    def __init__(self, obj_id: int = None, label: str = "",start_time: int = 1,delay_sla: int = 0) -> object:
         """Creates an Application object.
 
         Args:
@@ -44,6 +44,14 @@ class Application(ComponentManager, Agent):
         # Model-specific attributes (defined inside the model's "initialize()" method)
         self.model = None
         self.unique_id = None
+        
+        ##发布时间和属性状态
+        self.start_time = start_time
+        self.end_time = None
+        self.delay = 0
+        self.state = "init" # init->wait->access->finished
+        self.delay_sla = delay_sla
+        
 
     def _to_dict(self) -> dict:
         """Method that overrides the way the object is formatted to JSON."
@@ -55,6 +63,10 @@ class Application(ComponentManager, Agent):
             "attributes": {
                 "id": self.id,
                 "label": self.label,
+                "start_time" :self.start_time,
+                "delay" : self.delay,
+                "self.state": self.state,
+                "delay_sla":self.delay_sla,
             },
             "relationships": {
                 "services": [{"class": type(service).__name__, "id": service.id} for service in self.services],
@@ -69,13 +81,15 @@ class Application(ComponentManager, Agent):
         Returns:
             metrics (dict): Object metrics.
         """
-        metrics = {}
+        metrics = {
+            "delay_sla":self.delay_sla,
+            "delay":self.delay,
+        }
         return metrics
 
     def step(self):
         """Method that executes the events involving the object at each time step."""
-        ...
-
+        pass
     def connect_to_service(self, service: object) -> object:
         """Creates a relationship between the application and a given Service object.
 

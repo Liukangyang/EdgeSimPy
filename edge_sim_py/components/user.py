@@ -39,17 +39,17 @@ class User(ComponentManager, Agent):
         self.id = obj_id
 
         # User coordinates
-        self.coordinates_trace = []
-        self.coordinates = None
+        self.coordinates_trace = []   # 移动轨迹
+        self.coordinates = None  # 当前坐标
 
         # List of applications accessed by the user
-        self.applications = []
+        self.applications = [] #访问应用列表
 
         # Reference to the base station the user is connected to
-        self.base_station = None
+        self.base_station = None  # 关联基站，用户网关
 
         # User access metadata
-        self.making_requests = {}
+        self.making_requests = {}  # 请求列表
         self.access_patterns = {}
 
         # User mobility model
@@ -58,8 +58,8 @@ class User(ComponentManager, Agent):
 
         # List of metadata from applications accessed by the user
         self.communication_paths = {}
-        self.delays = {}
-        self.delay_slas = {}
+        self.delays = {} # 应用访问时延
+        self.delay_slas = {}  # 应用SLA
 
         # Model-specific attributes (defined inside the model's "initialize()" method)
         self.model = None
@@ -155,6 +155,7 @@ class User(ComponentManager, Agent):
             self.coordinates = self.coordinates_trace[self.model.schedule.steps]
 
             # Connecting the user to the closest base station
+            # 关联最近的基站
             self.base_station = BaseStation.find_by(attribute_name="coordinates", attribute_value=self.coordinates)
 
             for application in self.applications:
@@ -166,7 +167,7 @@ class User(ComponentManager, Agent):
                 else:
                     self.communication_paths[str(application.id)] = []
                     self._compute_delay(app=application)
-
+                                     
     def _compute_delay(self, app: object, metric: str = "latency") -> int:
         """Computes the delay of an application accessed by the user.
 

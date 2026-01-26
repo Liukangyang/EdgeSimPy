@@ -1,0 +1,26 @@
+  {  "NetworkSwitch":[
+
+    ],
+    "NetworkLink":[
+
+    ],
+    "BaseStation":[
+
+    ],
+    "User":[
+
+    ],
+     "Service":[
+
+     ],
+     "Application":[
+
+     ],
+     "EdgeServer":[
+
+     ],
+     "RandomDurationAndIntervalAccessPattern": [],
+     "CircularDurationAndIntervalAccessPattern":[
+
+     ]
+}
