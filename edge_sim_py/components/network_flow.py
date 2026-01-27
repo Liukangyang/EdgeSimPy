@@ -96,7 +96,7 @@ class NetworkFlow(ComponentManager, Agent):
         dictionary = {
             "id": self.id,
             "status": self.status,
-            "nodes": [{"type": type(node).__name__, "id": node.id} for node in self.nodes],
+            "nodes": [{"type": type(node).__name__, "id": node.id} for node in [self.source,self.target]],
             "path": self.path,
             "start": self.start,
             "end": self.end,
