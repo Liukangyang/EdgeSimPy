@@ -67,13 +67,6 @@ class Service(ComponentManager, Agent):
         self.ssd_size = ssd_size #SSD
         self.memory_demand = memory_demand #RAM
         self.bw_demand = bw_demand  #MB
-
-        #Service src node
-        #
-        self.src = self.application.users[0].base_station.network_switch if self.application else None
-        
-        #Service's tranport path
-        self.path = None
           
         # Service state
         self.state = state
@@ -83,6 +76,12 @@ class Service(ComponentManager, Agent):
 
         # Application to whom the service belongs
         self.application = None
+        
+        #Service src node
+        self.src = None
+        
+        #Service's tranport path
+        self.path = []
 
         # List of users that access the service
         self.users = []
@@ -122,6 +121,9 @@ class Service(ComponentManager, Agent):
                 "ssd_demand": self.ssd_size,
                 "memory_demand": self.memory_demand,
                 "bw_demand": self.bw_demand,
+                "delay":self.delay,
+                "finished":self.finished_flag,
+                "src":self.src
                 #"image_digest": self.image_digest,
             },
             "relationships": {

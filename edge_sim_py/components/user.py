@@ -90,7 +90,7 @@ class User(ComponentManager, Agent):
             },
             "relationships": {
                 "access_patterns": access_patterns,
-                "mobility_model": self.mobility_model.__name__,
+                "mobility_model": self.mobility_model.__name__ if self.mobility_model else None,
                 "applications": [{"class": type(app).__name__, "id": app.id} for app in self.applications],
                 "base_station": {"class": type(self.base_station).__name__, "id": self.base_station.id},
             },
@@ -112,6 +112,7 @@ class User(ComponentManager, Agent):
             "Coordinates": self.coordinates,
             "Base Station": f"{self.base_station} ({self.base_station.coordinates})" if self.base_station else None,
             "Delays": copy.deepcopy(self.delays),
+            "delay_sla":copy.deepcopy(self.delay_slas),
             "Communication Paths": copy.deepcopy(self.communication_paths),
             "Making Requests": copy.deepcopy(self.making_requests),
             "Access History": copy.deepcopy(access_history),
@@ -222,11 +223,14 @@ class User(ComponentManager, Agent):
         if len(communication_path) > 0:
             self.communication_paths[str(app.id)] = communication_path
         else:
+            #没有指定的路径
             self.communication_paths[str(app.id)] = []
 
-            service_hosts_base_stations = [service.server.base_station for service in app.services if service.server]
-            communication_chain = [self.base_station] + service_hosts_base_stations
+            #service_hosts_base_stations = [service.server.base_station for service in app.services if service.server]
+            #communication_chain = [self.base_station] + service_hosts_base_stations # 用户基站+服务器所处基站
 
+            service_hosts_server = [service.server for service in app.services if service.server]
+            communication_chain = [self.base_station] + service_hosts_server # 用户基站+服务器所处基站
             # Defining a set of links to connect the items in the application's service chain
             for i in range(len(communication_chain) - 1):
 
@@ -240,8 +244,8 @@ class User(ComponentManager, Agent):
                 else:
                     path = nx.shortest_path(
                         G=topology,
-                        source=origin.network_switch,
-                        target=target.network_switch,
+                        source=origin.network_switch, #用户基站关联的交换机
+                        target=target.network_switch,  #目标所在交换机
                         weight="delay",
                         method="dijkstra",
                     )

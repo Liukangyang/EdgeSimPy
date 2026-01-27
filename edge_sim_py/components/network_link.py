@@ -103,11 +103,11 @@ class NetworkLink(dict, ComponentManager, Agent):
                 "id": self.id,
                 "delay": self.delay,
                 "bandwidth": self.bandwidth,
-                "bandwidth_demand": self.bandwidth_demand,
+                "bandwidth_demand(Mb/s)": self.bandwidth_demand,
                 "active": self.active,
             },
             "relationships": {
-                "topology": {"class": "Topology", "id": self.topology.id},
+                #"topology": {"class": "Topology", "id": self.topology.id},
                 "active_flows": [{"class": type(flow).__name__, "id": flow.id} for flow in self.active_flows],
                 "applications": [{"class": type(app).__name__, "id": app.id} for app in self.applications],
                 "nodes": [{"class": type(node).__name__, "id": node.id} for node in self.nodes],

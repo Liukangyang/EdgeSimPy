@@ -49,7 +49,7 @@ class Application(ComponentManager, Agent):
         self.start_time = start_time
         self.end_time = None
         self.delay = 0
-        self.state = "init" # init->wait->access->finished
+        self.status = "init" # init->wait->access->finished
         self.delay_sla = delay_sla
         
 
@@ -65,7 +65,7 @@ class Application(ComponentManager, Agent):
                 "label": self.label,
                 "start_time" :self.start_time,
                 "delay" : self.delay,
-                "self.state": self.state,
+                "self.status": self.status,
                 "delay_sla":self.delay_sla,
             },
             "relationships": {

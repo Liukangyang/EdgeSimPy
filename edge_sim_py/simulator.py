@@ -196,8 +196,10 @@ class Simulator(ComponentManager, Model):
                 # Defining attributes referencing callables (i.e., functions and methods)
                 if type(value) == str and value in globals():
                     setattr(component, f"{key}", globals()[value])
-
+                elif type(value)==str and value == "None":
+                    setattr(component, f"{key}", None)
                 # Defining attributes referencing lists of components (e.g., lists of edge servers, users, etc.)
+                # 关联对象列表
                 elif type(value) == list:
                     attribute_values = []
                     for item in value:
@@ -215,6 +217,7 @@ class Simulator(ComponentManager, Model):
                     setattr(component, f"{key}", attribute_values)
 
                 # Defining attributes that reference a single component (e.g., an edge server, an user, etc.)
+               # 关联一个对象
                 elif type(value) == dict and "class" in value and "id" in value:
                     obj = (
                         globals()[value["class"]].find_by_id(value["id"])
@@ -241,7 +244,8 @@ class Simulator(ComponentManager, Model):
                         attribute[k] = obj
 
                     setattr(component, f"{key}", attribute)
-
+                elif type(value) == dict and not ("class" in entry or "id" in entry for entry in value.values()):
+                    setattr(component, f"{key}", None)
                 # Defining "None" attributes
                 elif value == None:
                     setattr(component, f"{key}", None)
@@ -259,7 +263,18 @@ class Simulator(ComponentManager, Model):
             topology.add_edge(link.nodes[0], link.nodes[1])
             topology._adj[link.nodes[0]][link.nodes[1]] = link
             topology._adj[link.nodes[1]][link.nodes[0]] = link
-
+        # 补充：
+        #1.将用户每个应用的时延sla赋值给相应应用
+        for user in User.all():
+            for id,delay_sla in user.delay_slas.items():
+                app = Application.find_by_id(int(id))
+                if app:
+                    setattr(app,"delay_sla",delay_sla)
+        #2.设置每个服务的起始节点
+        for service in Service.all():
+            src = service.application.users[0].base_station.network_switch if service.application and len(service.application.users)>0 else None
+            setattr(service,"src",src)
+            
     def run_model(self):
         """Executes the simulation."""
         if self.stopping_criterion == None:

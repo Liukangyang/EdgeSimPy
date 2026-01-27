@@ -308,7 +308,12 @@
                 "making_requests": {}
             },
             "relationships": {
-                "access_patterns": {                },
+                "access_patterns": {
+                    "1": {
+                        "class": "CircularDurationAndIntervalAccessPattern",
+                        "id": 1
+                    }
+                },
                 "mobility_model":"None",
                 "applications": [
                     {
@@ -338,7 +343,12 @@
                 "making_requests": {}
             },
             "relationships": {
-                "access_patterns": {                },
+                "access_patterns": {
+                  "2": {
+                        "class": "CircularDurationAndIntervalAccessPattern",
+                        "id": 2
+                    }
+                },
                 "mobility_model":"None",
                 "applications": [
                     {
@@ -368,7 +378,12 @@
                 "making_requests": {}
             },
             "relationships": {
-                "access_patterns": {                },
+                "access_patterns": {
+                    "3": {
+                        "class": "CircularDurationAndIntervalAccessPattern",
+                        "id": 3
+                    }
+                },
                 "mobility_model":"None",
                 "applications": [
                     {
@@ -457,7 +472,8 @@
         {
             "attributes": {
                 "id": 1,
-                "label": "app1"
+                "label": "app1",
+                "start_time":1
             },
             "relationships": {
                 "services": [
@@ -477,7 +493,8 @@
         {
             "attributes": {
                 "id": 2,
-                "label": "app2"
+                "label": "app2",
+                "start_time":2
             },
             "relationships": {
                 "services": [
@@ -497,7 +514,8 @@
           {
             "attributes": {
                 "id": 3,
-                "label": "app3"
+                "label": "app3",
+                "start_time":3
             },
             "relationships": {
                 "services": [
@@ -536,9 +554,9 @@
                 "disk_demand": 0,
                 "bw_demand":0,
                 "Cabability":{
-                    "cpu":100,
-                    "gpu":200,
-                    "pcie":1000
+                  "cpu":100,
+                  "gpu":200,
+                  "pcie":1000
                 },
                 "coordinates": [
                     5,
@@ -549,7 +567,7 @@
                 "power_model_parameters": {}
             },
             "relationships": {
-                "power_model": "",
+                "power_model": "None",
                 "base_station": {},
                 "network_switch": {
                     "class": "NetworkSwitch",
@@ -577,9 +595,9 @@
                 "disk_demand": 0,
                 "bw_demand":0,
                 "Cabability":{
-                    "cpu":200,
-                    "gpu":200,
-                    "pcie":2000
+                  "cpu":200,
+                  "gpu":200,
+                  "pcie":2000
                 },
                 "coordinates": [
                     5,
@@ -590,7 +608,7 @@
                 "power_model_parameters": {}
             },
             "relationships": {
-                "power_model": "",
+                "power_model": "None",
                 "base_station": {},
                 "network_switch": {
                     "class": "NetworkSwitch",
@@ -604,5 +622,102 @@
         }       
      ],
      "RandomDurationAndIntervalAccessPattern": [],
-     "CircularDurationAndIntervalAccessPattern":[]
+     "CircularDurationAndIntervalAccessPattern":[
+                {
+            "attributes": {
+                "id": 1,
+                "duration_values": [
+                    Infinity
+                ],
+                "interval_values": [
+                    0
+                ],
+                "history": [
+                    {
+                        "start": 1,
+                        "end": Infinity,
+                        "duration": Infinity,
+                        "waiting_time": 0,
+                        "access_time": 0,
+                        "interval": 0,
+                        "next_access": Infinity
+                    }
+                ]
+            },
+            "relationships": {
+                "user": {
+                    "class": "User",
+                    "id": 1
+                },
+                "app": {
+                    "class": "Application",
+                    "id": 1
+                }
+            }
+        },
+    {
+            "attributes": {
+                "id": 2,
+                "duration_values": [
+                    Infinity
+                ],
+                "interval_values": [
+                    0
+                ],
+                "history": [
+                    {
+                        "start": 2,
+                        "end": Infinity,
+                        "duration": Infinity,
+                        "waiting_time": 0,
+                        "access_time": 0,
+                        "interval": 0,
+                        "next_access": Infinity
+                    }
+                ]
+            },
+            "relationships": {
+                "user": {
+                    "class": "User",
+                    "id": 2
+                },
+                "app": {
+                    "class": "Application",
+                    "id": 2
+                }
+            }
+        },
+        {
+            "attributes": {
+                "id": 3,
+                "duration_values": [
+                    Infinity
+                ],
+                "interval_values": [
+                    0
+                ],
+                "history": [
+                    {
+                        "start": 3,
+                        "end": Infinity,
+                        "duration": Infinity,
+                        "waiting_time": 0,
+                        "access_time": 0,
+                        "interval": 0,
+                        "next_access": Infinity
+                    }
+                ]
+            },
+            "relationships": {
+                "user": {
+                    "class": "User",
+                    "id": 3
+                },
+                "app": {
+                    "class": "Application",
+                    "id": 3
+                }
+            }
+        }
+     ]
 }

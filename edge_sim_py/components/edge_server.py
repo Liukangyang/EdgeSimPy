@@ -32,7 +32,7 @@ class EdgeServer(ComponentManager, Agent):
         memory: int = 0,
         disk: int = 0,
         power_model: typing.Callable = None,
-        Cabability: dict = {}
+        Cabability: dict={}
     ) -> object:
         """Creates an EdgeServer object.
 
@@ -77,9 +77,9 @@ class EdgeServer(ComponentManager, Agent):
         self.bw = bw
         
         self.Cabability = Cabability
-        self.cpu_CompCabality  = self.Cabability["cpu"]
-        self.gpu_CompCabality  = self.Cabability["gpu"]
-        self.gpu_CompCabality  = self.Cabability["pcie"]
+        #self.cpu_CompCabality  = 0
+        #self.gpu_CompCabality  = 0
+        #self.pcie_CompCabality  = 0
 
         
         # Edge server demand
@@ -140,11 +140,17 @@ class EdgeServer(ComponentManager, Agent):
                 "available": self.available,
                 "model_name": self.model_name,
                 "cpu": self.cpu,
+                "gpu":self.gpu,
                 "memory": self.memory,
                 "disk": self.disk,
+                "bw":self.bw,
                 "cpu_demand": self.cpu_demand,
+                "gpu_demand": self.gpu_demand,
                 "memory_demand": self.memory_demand,
                 "disk_demand": self.disk_demand,
+                "bw_demand":self.bw_demand,
+                "resource_ratio":self.resource_used_ratio,
+                "Cabability":self.Cabability,
                 "coordinates": self.coordinates,
                 "max_concurrent_layer_downloads": self.max_concurrent_layer_downloads,
                 "active": self.active,
@@ -158,10 +164,10 @@ class EdgeServer(ComponentManager, Agent):
                 "network_switch": {"class": type(self.network_switch).__name__, "id": self.network_switch.id}
                 if self.network_switch
                 else None,
-                "services": [{"class": type(service).__name__, "id": service.id} for service in self.services],
-                "container_layers": [{"class": type(layer).__name__, "id": layer.id} for layer in self.container_layers],
-                "container_images": [{"class": type(image).__name__, "id": image.id} for image in self.container_images],
-                "container_registries": [{"class": type(reg).__name__, "id": reg.id} for reg in self.container_registries],
+                "services": [{"class": type(service).__name__, "id": service.id} for service in self.services]
+                #"container_layers": [{"class": type(layer).__name__, "id": layer.id} for layer in self.container_layers],
+                #"container_images": [{"class": type(image).__name__, "id": image.id} for image in self.container_images],
+                #"container_registries": [{"class": type(reg).__name__, "id": reg.id} for reg in self.container_registries],
             },
         }
         return dictionary

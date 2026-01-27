@@ -76,11 +76,12 @@ class NetworkFlow(ComponentManager, Agent):
         self.metadata = metadata
 
         # Adding a reference to the flow inside the network links that comprehend the "path" attribute
-        for i in range(0, len(path) - 1):
-            link = self.topology[path[i]][path[i + 1]]
-            link["active_flows"].append(self)
-            self.bandwidth[link["id"]] = None
-            self.last_updated_bandwidth[link["id"]] = None
+        if(len(path)>0):
+            for i in range(0, len(path) - 1):
+                link = self.topology[path[i]][path[i + 1]]
+                link["active_flows"].append(self)
+                self.bandwidth[link["id"]] = None
+                self.last_updated_bandwidth[link["id"]] = None
 
         # Model-specific attributes (defined inside the model's "initialize()" method)
         self.model = None
