@@ -44,6 +44,7 @@ class NetworkLink(dict, ComponentManager, Agent):
         # Link bandwidth capacity and bandwidth demand
         self["bandwidth"] = 0
         self["bandwidth_demand"] = 0
+        self["bandwidth_left"] = 0
 
         # List of applications using the link for routing data to their users
         self["applications"] = []
@@ -57,6 +58,10 @@ class NetworkLink(dict, ComponentManager, Agent):
         # Model-specific attributes (defined inside the model's "initialize()" method)
         self["model"] = None
         self["unique_id"] = None
+        
+        # link distance and link speed
+        self["distance"] = 100.0
+        self["link_speed"] = 2e8
 
     def __getattr__(self, attribute_name: str):
         """Retrieves an object attribute by its name.
@@ -121,10 +126,41 @@ class NetworkLink(dict, ComponentManager, Agent):
         Returns:
             metrics (dict): Object metrics.
         """
-        metrics = {}
+        metrics = {
+            "bandwidth":self.bandwidth,
+            "bandwidth_demand":self.bandwidth_demand
+        }
         return metrics
 
     def step(self):
         """Method that executes the events involving the object at each time step."""
         # Updating the link's bandwidth demand based on the slice of bandwidth used by the active flows that cross it in the current step
+        # 更新链路占用的带宽和剩余带宽
+        self["delay"] = float(self["distance"]) / self["link_speed"]
         self["bandwidth_demand"] = sum(flow.bandwidth[self.id] for flow in self["active_flows"])
+        self["bandwidth_left"] = self["bandwidth"] - self["bandwidth_demand"]
+        
+    #浅拷贝
+    def __copy__(self):
+        #1.创建实例
+        new_obj = NetworkLink() #调用__init__
+        # 2. 构建需复制的属性字典（排除 "id"）
+        #items_to_copy = {k: v for k, v in self.items() if k != "id"}
+        new_obj["topology"]=self["topology"]
+        new_obj["nodes"]=self["nodes"]
+        new_obj["delay"]=self["delay"]
+        new_obj["bandwidth"]=self["bandwidth"]
+        new_obj["bandwidth_demand"]=self["bandwidth_demand"]
+        new_obj["bandwidth_left"]=self["bandwidth_left"]
+        new_obj["active"]=self["active"]
+        new_obj["model"]=self["model"]                
+        new_obj["distance"]=self["distance"]  
+        new_obj["link_speed"]=self["link_speed"]            
+        #new_obj.update(items_to_copy)  # 浅拷贝：嵌套对象共享引用
+    
+        # 4. 复制 __dict__（处理 ComponentManager/Agent 可能设置的非字典属性）
+        """
+        if hasattr(self, '__dict__'):
+            new_obj.__dict__ = self.__dict__.copy()  # 浅拷贝 __dict__
+        """
+        return new_obj

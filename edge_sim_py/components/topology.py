@@ -2,7 +2,7 @@
 # EdgeSimPy components
 from edge_sim_py.component_manager import ComponentManager
 from edge_sim_py.components.network_flow import NetworkFlow
-
+from  copy import *
 # Mesa modules
 from mesa import Agent
 
@@ -66,6 +66,7 @@ class Topology(ComponentManager, nx.Graph, Agent):
 
     def step(self):
         """Method that executes the events involving the object at each time step."""
+        #流量带宽调度
         self.model.network_flow_scheduling_algorithm(topology=self, flows=NetworkFlow.all())
 
     def _remove_path_duplicates(self, path: list) -> list:
@@ -135,3 +136,15 @@ class Topology(ComponentManager, nx.Graph, Agent):
 
                     if app in link["applications"]:
                         link["applications"].remove(app)
+
+    def _shortest_path(self,origin:object=None,target:object=None, weight="delay",method="dijkstra")->list:
+        path = nx.shortest_path(
+                        G=self,
+                        source=origin, #用户基站关联的交换机
+                        target=target,  #服务部署服务器关联的交换机
+                        weight=weight,
+                        method=method,
+                    )
+        # 待扩展排队时延的计算#############
+        
+        return path
