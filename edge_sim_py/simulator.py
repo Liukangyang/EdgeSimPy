@@ -181,7 +181,7 @@ class Simulator(ComponentManager, Model):
         for key in data.keys():
             if key != "Simulator" and key != "Topology":
                 for object_metadata in data[key]:
-                    #根据属性字典创建对象
+                    #根据属性字典创建对�?
                     new_component = globals()[key]._from_dict(dictionary=object_metadata["attributes"])
                     #保存依赖关系
                     new_component.relationships = object_metadata["relationships"]
@@ -219,7 +219,7 @@ class Simulator(ComponentManager, Model):
                     setattr(component, f"{key}", attribute_values)
 
                 # Defining attributes that reference a single component (e.g., an edge server, an user, etc.)
-               # 关联一个对象
+               # 关联一个对�?
                 elif type(value) == dict and "class" in value and "id" in value:
                     obj = (
                         globals()[value["class"]].find_by_id(value["id"])
@@ -274,14 +274,14 @@ class Simulator(ComponentManager, Model):
             topology._adj[link.nodes[0]][link.nodes[1]] = link
             topology._adj[reverse_link.nodes[0]][reverse_link.nodes[1]] = reverse_link
             
-        # 补充：
+        # 补充�?
         #1.将用户每个应用的时延sla赋值给相应应用
         for user in User.all():
             for id,delay_sla in user.delay_slas.items():
                 app = Application.find_by_id(int(id))
                 if app:
                     setattr(app,"delay_sla",delay_sla)
-        #2.设置每个服务的起始节点
+        #2.设置每个服务的起始节�?
         for service in Service.all():
             src = service.application.users[0].base_station.network_switch if service.application and len(service.application.users)>0 else None
             setattr(service,"src",src)

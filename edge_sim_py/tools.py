@@ -29,20 +29,14 @@ def User_step(self):
                 app.status = "wait"
             # 遍历应用状�?
             elif app.status == "wait":
-                    if len([s for s in app.services if s._available]) == len(app.services):
-                        #TODO:service的可用性需要在服务传输完成后更新，并计算应用的完整时延
-                        app.status = "access"
-                        last_access["access_time"] += 1
-                        # 设置应用流转路径
-                        self.set_communication_path(app=app)
-                    else:
-                        last_access["waiting_time"] += 1
-                        self.communication_paths[str(app.id)] = []
-                        self._compute_delay(app=app)
+                    last_access["waiting_time"] += 1
+                    self.communication_paths[str(app.id)] = []
+                    self._compute_delay(app=app)
             elif app.status == "access": #等待计算
                         last_access["access_time"] += 1
-            elif app.status == "finished":
-                        app.end_time = current_step  #TODO:结束时间应当为开始时间加上模拟的完成时延
+            elif app.status == "finished":  
+                    self.set_communication_path(app=app)
+                    app.end_time = current_step  #TODO:结束时间应当为开始时间加上模拟的完成时延
 
             """
             # Updating user's making requests attribute for the next time step
@@ -94,19 +88,26 @@ def User_path(self, app: object, communication_path: list = [])->list:
                 if origin == target:
                     path = []
                 else:
+                    path = self.model.topology._shortest_path(
+                        origin = origin.network_switch,
+                        target = target, #target_server
+                        weight="delay",
+                        method="dijkstra"
+                    )
+                    """
                     path = nx.shortest_path(
                         G=topology,
                         source=origin.network_switch, #用户基站关联的交换机
                         target=target.network_switch,  #服务部署服务器关联的交换�?
                         weight="delay",
                         method="dijkstra",
-                    )
+                    )"""
 
                 # Adding the best path found to the communication path
-                self.communication_paths[str(app.id)].append([network_switch.id for network_switch in path])
-
+                #self.communication_paths[str(app.id)].append([network_switch.id for network_switch in path])
+                self.communication_paths[str(app.id)].append([network_switch for network_switch in path])
                 # Computing the new demand of chosen links
-                path = [[NetworkSwitch.find_by_id(i) for i in p] for p in self.communication_paths[str(app.id)]]
+                path = [[network_switch for network_switch in p] for p in self.communication_paths[str(app.id)]]
                 
                 # 将应用添加到经过的每跳链路当�?
                 topology._allocate_communication_path(communication_path=path, app=app)
@@ -114,7 +115,43 @@ def User_path(self, app: object, communication_path: list = [])->list:
         # Computing application's delay
         self._compute_delay(app=app, metric="latency")        
         return self.communication_paths[str(app.id)] 
-   
+
+#
+def User_compute_delay(self, app: object, metric: str = "latency")->float:
+        """Computes the delay of an application accessed by the user.
+
+        Args:
+            metric (str, optional): Delay measure (valid options: 'latency' and 'response time'). Defaults to 'latency'.
+            app (object): Application accessed by the user.
+
+        Returns:
+            delay (int): User-perceived delay when accessing application "app".
+        """
+        topology = Topology.first()
+
+        services_available = len([s for s in app.services if s._available])
+        if services_available < len(app.services):
+            # Defining the delay as infinity if any of the application services is not available
+            delay = float("inf")
+        else:
+            # Initializes the application's delay with the time it takes to communicate its client and his base station
+            # first delay
+            delay = self.base_station.wireless_delay
+
+            # Adding the communication path delay to the application's delay
+            for path in self.communication_paths[str(app.id)]:
+                delay += topology.calculate_path_delay(path=path)
+
+            if metric.lower() == "response time":
+                # We assume that Response Time = Latency * 2
+                delay = delay * 2
+
+        # Updating application delay inside user's 'applications' attribute
+        self.delays[str(app.id)] = delay
+
+        return delay
+
+
 #应用步进：实现对应用结束状态的判断
 def Application_Step(self):
         if any(service._Service__migrations[-1]["status"]=="finished" for service in self.services if len(service._Service__migrations)>0):
@@ -217,9 +254,7 @@ def Service_Provision(self,target_server: object):
         """
         # 将服务加入到目标服务器等待队列中
         target_server.waiting_queue.append(self)
-        # corelation
-        target_server.services.append(self)
-        self.server = target_server
+
         # Reserving the service demand inside the target server and telling EdgeSimPy that server will receive a service
         target_server.ongoing_migrations += 1
         target_server.cpu_demand += self.cpu_demand
@@ -227,15 +262,6 @@ def Service_Provision(self,target_server: object):
         target_server.disk_demand += self.ssd_size
         target_server.memory_demand += self.memory_demand
         target_server.bw_demand += self.bw_demand   
-        
-        # path
-        self.path = nx.shortest_path(
-            G=self.model.topology,
-            source = self.src, #source switch
-            target = target_server.network_switch, #target switch
-            weight="delay",
-            method="dijkstra",
-        )
         
         
         # Updating the service's migration status
@@ -312,6 +338,8 @@ def EdgeServer_Step(self):
         self.model.initialize_agent(agent=flow)
         #将流量加入到目标服务器的下载队列�??
         self.download_queue.append(flow) 
+        #
+        unload_service.application.status="access"
 
 #资源池判断是否有足够的资�??
 def has_capacity_to_host(self,service:object)-> bool:
@@ -370,12 +398,6 @@ def My_Schedule(parameters:dict):
         #2.寻找适合的服务器
         for server in EdgeServer.All():
             if server.has_capacity_to_host(service):
-                #更新路径
-                service.path = nx.shortest_path(
-                        G=server.model.topology,
-                        source=service.src,
-                        target=server.network_switch,
-                )
                 #部署服务
                 service.privsison(target_server = server)
                 break

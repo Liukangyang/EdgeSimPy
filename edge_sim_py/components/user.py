@@ -46,7 +46,7 @@ class User(ComponentManager, Agent):
         self.applications = [] #访问应用列表
 
         # Reference to the base station the user is connected to
-        self.base_station = None  # 关联基站，用户网关
+        self.base_station = None  # 关联基站，用户网�?
 
         # User access metadata
         self.making_requests = {}  # 请求列表
@@ -169,7 +169,7 @@ class User(ComponentManager, Agent):
                     self.communication_paths[str(application.id)] = []
                     self._compute_delay(app=application)
                                      
-    def _compute_delay(self, app: object, metric: str = "latency") -> int:
+    def _compute_delay(self, app: object, metric: str = "latency") -> float:
         """Computes the delay of an application accessed by the user.
 
         Args:
@@ -223,14 +223,14 @@ class User(ComponentManager, Agent):
         if len(communication_path) > 0:
             self.communication_paths[str(app.id)] = communication_path
         else:
-            #没有指定的路径
+            #没有指定的路�?
             self.communication_paths[str(app.id)] = []
 
             #service_hosts_base_stations = [service.server.base_station for service in app.services if service.server]
-            #communication_chain = [self.base_station] + service_hosts_base_stations # 用户基站+服务器所处基站
+            #communication_chain = [self.base_station] + service_hosts_base_stations # 用户基站+服务器所处基�?
 
             service_hosts_server = [service.server for service in app.services if service.server]
-            communication_chain = [self.base_station] + service_hosts_server # 用户基站+服务器所处基站
+            communication_chain = [self.base_station] + service_hosts_server # 用户基站+服务器所处基�?
             # Defining a set of links to connect the items in the application's service chain
             for i in range(len(communication_chain) - 1):
 
