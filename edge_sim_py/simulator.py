@@ -7,6 +7,8 @@ from edge_sim_py.activation_schedulers import *
 # Mesa modules
 from mesa import Model, Agent
 
+import copy
+
 # Python libraries
 import os
 import json
@@ -252,17 +254,26 @@ class Simulator(ComponentManager, Model):
 
                 else:
                     raise Exception(f"Couldn't add the relationship {key} with value {value}. Please check your dataset.")
-
+        #get current link list
+        current_list = NetworkLink.all()
+        l = len(current_list)
         # Filling the network topology
-        for link in NetworkLink.all():
+        for i in range(l):
+            link = current_list[i] 
+            #get copy link
+            reverse_link = copy.copy(link)
+            reverse_link.nodes = []
+            # reverse associated nodes
+            reverse_link.nodes.append(link.nodes[1]);reverse_link.nodes.append(link.nodes[0])
             # Adding the nodes connected by the link to the topology
             topology.add_node(link.nodes[0])
             topology.add_node(link.nodes[1])
-
             # Replacing NetworkX's default link dictionary with the NetworkLink object
             topology.add_edge(link.nodes[0], link.nodes[1])
+            topology.add_edge(reverse_link.nodes[0], reverse_link.nodes[1])
             topology._adj[link.nodes[0]][link.nodes[1]] = link
-            topology._adj[link.nodes[1]][link.nodes[0]] = link
+            topology._adj[reverse_link.nodes[0]][reverse_link.nodes[1]] = reverse_link
+            
         # 补充：
         #1.将用户每个应用的时延sla赋值给相应应用
         for user in User.all():
@@ -274,6 +285,15 @@ class Simulator(ComponentManager, Model):
         for service in Service.all():
             src = service.application.users[0].base_station.network_switch if service.application and len(service.application.users)>0 else None
             setattr(service,"src",src)
+        # 3. 为每个相连交换机设置出口队列
+        for link in NetworkLink.all():
+            node1 = link.nodes[0]
+            node2 = link.nodes[1]
+            if(node1.__class__==NetworkSwitch): #node1->node2
+                node1.addQueue(target=node2,cache_len=1000,threshold_len=1000,qos=1,active=True)
+            if(node2.__class__==NetworkSwitch): #node2->node1
+                node2.addQueue(target=node1,cache_len=1000,threshold_len=1000,qos=1,active=True)
+
             
     def run_model(self):
         """Executes the simulation."""

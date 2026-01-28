@@ -8,6 +8,8 @@ from edge_sim_py.components.network_flow import NetworkFlow
 from edge_sim_py.components.edge_server import EdgeServer
 from edge_sim_py.components.user import User
 from edge_sim_py.components.service import Service
+from edge_sim_py.components.queue import Queue
+
 # Mesa modules
 from mesa import Agent
 
@@ -159,14 +161,17 @@ def Service_Step(self):
                 migration["updated"] = True
                 
                 ##
+                #若部署服务时就关联到服务，则此处会发生服务错误地从部署服务器删除
+                """
                 if self.server:
                     self.server.services.remove(self)
                     self.server.ongoing_migrations -= 1
+                """
                 ##
                 
                 # Updating the service's target server metadata
-                self.server = migration["target"]
-                self.server.services.append(self)
+                #self.server = migration["target"]
+                #self.server.services.append(self)
                 self.server.ongoing_migrations -= 1
 
                 # Tagging the service as available once their migrations finish
@@ -189,6 +194,27 @@ def Service_Provision(self,target_server: object):
         if self.server:
             self.server.ongoing_migrations += 1
         
+        
+        # 进行关联
+        target_server.services.append(self)
+        self.server = target_server
+        
+        # 计算服务最短路径
+        #源：用户所在出口交换机 目的：目标服务器关联交换机
+        # self.path = self.model.topology._shortest_path(origin=self.src,target=target_server.network_switch, weight="delay",method="dijkstra")
+        #源：用户所在出口交换机 目的：目标服务器
+        self.path = self.model.topology._shortest_path(origin=self.src,target=target_server, weight="delay",method="dijkstra")
+        
+        # 设定流量可用带宽
+        """
+        self.path = nx.shortest_path(
+            G = self.model.topology,
+            source=self.src,
+            target = target_server.network_switch,
+            weight="delay",
+            method="dijkstra",       
+        )
+        """
         # 将服务加入到目标服务器等待队列中
         target_server.waiting_queue.append(self)
         
@@ -199,6 +225,7 @@ def Service_Provision(self,target_server: object):
         target_server.disk_demand += self.ssd_size
         target_server.memory_demand += self.memory_demand
         target_server.bw_demand += self.bw_demand   
+        
         # Updating the service's migration status
         self._Service__migrations.append(
             {
@@ -219,6 +246,7 @@ def NetworkFlow_Step(self):
        if self.status == "active":
             # Updating the flow progress according to the available bandwidth
             if not any([bw == None for bw in self.bandwidth.values()]):
+                # 模拟单步1s的传输 => 后续可将其转化为定时调度事件
                 self.data_to_transfer -= min(self.bandwidth.values())
 
             if self.data_to_transfer <= 0:
@@ -257,10 +285,7 @@ def NetworkFlow_Step(self):
 def EdgeServer_Step(self):
     while len(self.waiting_queue) > 0 and (len(self.download_queue) < self.max_concurrent_layer_downloads):
         unload_service = self.waiting_queue.pop(0)
-        # 进行关联
-        unload_service.server = self
-        self.services.append(unload_service)
-        #寻找路径
+
         # 为该服务创建网络�?
         flow = NetworkFlow(
                 topology=self.model.topology,
@@ -268,6 +293,7 @@ def EdgeServer_Step(self):
                 target=self, #目标为该服务�?
                 start=self.model.schedule.steps + 1,
                 path=unload_service.path, #传输路径由服务对象提供，由provision在调度时实现路径计�?
+                bandwidth_demand=unload_service.bw_demand,
                 data_to_transfer=unload_service.ssd_size,
                 metadata={"type": "service", "object": unload_service},
             )
@@ -294,6 +320,24 @@ def has_capacity_to_host(self,service:object)-> bool:
         can_host = all(free_resources[key]>= getattr(service,key+"_demand")for key in self.model.resources_list)
         return can_host
 
+#交换机步进
+def NetworkSwitch_Step(self):
+    pass
+
+#交换机绑定队列
+def addQueue(self,target:object=None,cache_len:int = 0,threshold_len:int=0,
+                 qos:int=0,active:bool=True):
+        if target==None:
+            raise Exception("add queue error:can't add a none object!")
+
+        queue = Queue(model=self.model,cache_len=cache_len,threshold_len=threshold_len,
+                      qos = qos,active=active,network_switch=self,target=target)
+        if self.model:
+            self.model.initialize_agent(agent=queue)
+
+        # 建立关联关系
+        self.queue[target.id] = {}
+        self.queue[target.id][queue.qos]=queue #每个QOS一个队列
 
 #Simulator步进
 def Simulator_Step(self):

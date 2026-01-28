@@ -209,7 +209,7 @@
                 ]
             }
           },
-                  {
+          {
             "attributes": {
                 "id": 5,
                 "delay": 5,
@@ -232,6 +232,60 @@
                     {
                         "class": "NetworkSwitch",
                         "id": 6
+                    }
+                ]
+            }
+          },
+        {
+            "attributes": {
+                "id": 6,
+                "delay": 5,
+                "bandwidth": 10000,
+                "bandwidth_demand": 0,
+                "active": true
+            },
+            "relationships": {
+                "topology": {
+                    "class": "Topology",
+                    "id": 1
+                },
+                "active_flows": [],
+                "applications": [],
+                "nodes": [
+                    {
+                        "class": "NetworkSwitch",
+                        "id": 5
+                    },
+                    {
+                        "class": "EdgeServer",
+                        "id": 1
+                    }
+                ]
+            }
+          },
+        {
+            "attributes": {
+                "id": 7,
+                "delay": 5,
+                "bandwidth": 10000,
+                "bandwidth_demand": 0,
+                "active": true
+            },
+            "relationships": {
+                "topology": {
+                    "class": "Topology",
+                    "id": 1
+                },
+                "active_flows": [],
+                "applications": [],
+                "nodes": [
+                    {
+                        "class": "NetworkSwitch",
+                        "id": 6
+                    },
+                    {
+                        "class": "EdgeServer",
+                        "id": 2
                     }
                 ]
             }

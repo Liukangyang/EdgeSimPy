@@ -1,7 +1,7 @@
 """ Contains network-switch-related functionality."""
 # EdgeSimPy components
 from edge_sim_py.component_manager import ComponentManager
-
+from edge_sim_py.components.queue import Queue
 # Mesa modules
 from mesa import Agent
 
@@ -45,6 +45,10 @@ class NetworkSwitch(ComponentManager, Agent):
 
         # List of links connected to the switch ports
         self.links = []
+        
+        # 队列对象字典列表{"qlen","阈值","丢包率"}
+        # 以交换机id为键，以队列对象为值(输出队列)
+        self.queue={} 
 
         # Power Features
         self.active = True
@@ -105,3 +109,8 @@ class NetworkSwitch(ComponentManager, Agent):
         """
         power_consumption = self.power_model.get_power_consumption(device=self) if self.power_model is not None else 0
         return power_consumption
+
+    #添加队列
+    def addQueue(self,target:object=None,cache_len:int = 0,threshold_len:int=0,
+                 qos:int=0,active:bool=True):
+        pass

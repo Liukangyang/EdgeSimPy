@@ -22,6 +22,7 @@ class NetworkFlow(ComponentManager, Agent):
         target: object = None,
         start: int = 0,
         path: list = [],
+        bandwidth_demand:int = 0,
         data_to_transfer: int = 0,
         metadata: dict = {},
     ) -> object:
@@ -65,6 +66,9 @@ class NetworkFlow(ComponentManager, Agent):
         self.bandwidth = {}
         self.last_updated_bandwidth = {}
 
+        # bandwidth demand from service
+        self.bandwidth_demand = bandwidth_demand
+        self.current_bandwidth = 0
         # Temporal information about the flow
         self.start = start
         self.end = None
