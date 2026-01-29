@@ -1,5 +1,5 @@
 {
-  "_log_step": "N/A",
+  "_log_step": 5,
   "flow_data": {
     "id": 3,
     "status": "active",
@@ -14,14 +14,14 @@
       }
     ],
     "path": [
-      "NetworkSwitch__2",
-      "NetworkSwitch__3",
-      "NetworkSwitch__6",
-      "EdgeServer__2"
+      "NetworkSwitch_2",
+      "NetworkSwitch_3",
+      "NetworkSwitch_6",
+      "EdgeServer_2"
     ],
-    "start": 3,
+    "start": 6,
     "end": null,
-    "data_to_transfer": 1,
+    "data_to_transfer": 1500,
     "bandwidth": {
       "2": null,
       "5": null,

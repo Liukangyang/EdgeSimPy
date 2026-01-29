@@ -21,4 +21,5 @@ def flow_share(topology: object, flows: list):
             link = topology[flow.path[i]][flow.path[i+1]]
             flow.bandwidth[link["id"]] = bw
             
+        #TODO:何时更新流量带宽？    
         flow.current_bandwidth = bw

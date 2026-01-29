@@ -90,21 +90,12 @@ simulate = Simulator(
     resource_management_algorithm = My_Schedule,
     network_flow_scheduling_algorithm = flow_share,
     stopping_criterion = Stop_func,
-    resource_management_algorithm_parameters= {"mode":1,"k1":0.2,"k2":0.3,"alpha":0.5,"beta":0.5}
-)
-
-#1.导入测试
-#networkflow schedule algorithm
-simulate = Simulator(
-    resource_management_algorithm = My_Schedule,
-    network_flow_scheduling_algorithm = flow_share,
-    stopping_criterion = Stop_func,
     resource_management_algorithm_parameters= {"mode":3,"k1":0.2,"k2":0.3,"alpha":0.5,"beta":0.5}
 )
 
 simulate.initialize(input_file="D:\\Code\\edgesimpy\\EdgeSimPy\\Test\\test1_data.json")
 datasets = Collect_Components()
-'''
+
 printComponent(datasets,"User")
 printComponent(datasets,"Application")
 printComponent(datasets,"Service")
@@ -112,7 +103,6 @@ printComponent(datasets,"EdgeServer")
 printComponent(datasets,"BaseStation")
 printComponent(datasets,"NetworkSwitch")
 
-'''
 
 while not simulate.stopping_criterion():
     simulate.schedule.steps+=1
@@ -125,45 +115,32 @@ while not simulate.stopping_criterion():
     #2.网络流步进
     for agent in NetworkFlow.all():
         agent.step()
-
-
     #2.服务器步进
     for agent in EdgeServer.all():
         #print(agent.waiting_queue)
         agent.step()
-    #未成功实现调度
-
     #3.服务步进
     for agent in Service.all():
-        agent.step()
-        
-        
+        agent.step()      
     #4.应用步进步进
     for agent in Application.all():
-        agent.step()
-        
+        agent.step()     
     #5.用户步进
     for agent in User.all():
-        agent.step()
-        
+        agent.step()      
     #print(User.all()[0].applications[0].status)
-
     #6.拓扑步进
     for agent in Topology.all():
-        agent.step()
-    
+        agent.step()    
     # 其他
     for agent in NetworkSwitch.all():
         agent.step()
-
     for agent in NetworkLink.all():
         agent.step()
-
     # 更新各服务器的资源利用率
     for server in EdgeServer.all():
         server._get_resource_ratio()
     # 每次迭代打印统计量
     tools.printResult2(Simulator=simulate,print_to_console=False)
-    
 #TODO：打印统计变量
 

@@ -483,7 +483,7 @@ def My_Schedule(parameters:dict):
                         break
                     count+=1
                 if select_server != None:
-                    select_server.provision(target_server = server)
+                    service.provision(target_server = select_server)
 
     elif parameters["mode"] == 3: #综合资源匹配度匹配
         #TODO：先按服务顺序遍历，每个服务选取资源匹配度最高的服务器
@@ -499,7 +499,6 @@ def My_Schedule(parameters:dict):
             if select_server!=None:
                 service.match_degree = match_degree
                 service.provision(target_server = select_server)
-
 
 # 仿真停止函数
 def Stop_func()->bool:
@@ -697,7 +696,7 @@ def log_network_flow(
         if add_timestamp:
             record = {
                 #"_log_timestamp": datetime.now().isoformat(),
-                "_log_step": getattr(flow, 'current_step', 'N/A'),  # 若模拟器提供当前步数
+                "_log_step": Topology.all()[0].model.schedule.steps,  # 若模拟器提供当前步数
                 "flow_data": data
             }
         else:

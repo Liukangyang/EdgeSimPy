@@ -1,22 +1,22 @@
 
 ==================================================
- Step: 5 | Time: 2026-01-29 22:50:53
+ Step: 7 | Time: 2026-01-30 00:06:59
 
  Services
 { 'Instance ID': 1,
   'Available': True,
-  'Server': 1,
+  'Server': 2,
   'Being Provisioned': False,
   'Last Migration': { 'status': 'finished',
                       'origin': 'NetworkSwitch_1',
-                      'target': 'EdgeServer_1',
-                      'start': 2,
-                      'end': 5,
+                      'target': 'EdgeServer_2',
+                      'start': 3,
+                      'end': 6,
                       'waiting': 0,
                       'pulling': 3,
                       'migr_state': 0,
-                      'delay': 400.5031},
-  'path': [NetworkSwitch_1, NetworkSwitch_3, NetworkSwitch_4, NetworkSwitch_5, EdgeServer_1]}
+                      'delay': 1.5348339333333332},
+  'path': [NetworkSwitch_1, NetworkSwitch_3, NetworkSwitch_6, EdgeServer_2]}
 
 { 'Instance ID': 2,
   'Available': True,
@@ -25,12 +25,12 @@
   'Last Migration': { 'status': 'finished',
                       'origin': 'NetworkSwitch_1',
                       'target': 'EdgeServer_2',
-                      'start': 2,
-                      'end': 4,
+                      'start': 3,
+                      'end': 5,
                       'waiting': 0,
                       'pulling': 2,
                       'migr_state': 0,
-                      'delay': 300.75210000000004},
+                      'delay': 2.5515008999999997},
   'path': [NetworkSwitch_1, NetworkSwitch_3, NetworkSwitch_6, EdgeServer_2]}
 
 { 'Instance ID': 3,
@@ -40,12 +40,12 @@
   'Last Migration': { 'status': 'finished',
                       'origin': 'NetworkSwitch_2',
                       'target': 'EdgeServer_2',
-                      'start': 2,
-                      'end': 4,
+                      'start': 5,
+                      'end': 7,
                       'waiting': 0,
                       'pulling': 2,
                       'migr_state': 0,
-                      'delay': 302.00210000000004},
+                      'delay': 2.90150045},
   'path': [NetworkSwitch_2, NetworkSwitch_3, NetworkSwitch_6, EdgeServer_2]}
 
  Servers
@@ -56,7 +56,7 @@
   'RAM Demand': 0,
   'bw_demand': 0,
   'resource_ratio': {'cpu': 0.0, 'gpu': 0.0, 'disk': 0.0, 'memory': 0.0, 'bw': 0.0},
-  'Services': [Service_1]}
+  'Services': []}
 
 { 'Instance ID': 2,
   'CPU Demand': 0,
@@ -65,7 +65,7 @@
   'RAM Demand': 0,
   'bw_demand': 0,
   'resource_ratio': {'cpu': 0.0, 'gpu': 0.0, 'disk': 0.0, 'memory': 0.0, 'bw': 0.0},
-  'Services': [Service_2, Service_3]}
+  'Services': [Service_1, Service_2, Service_3]}
 
 
 ==================================================
@@ -74,13 +74,13 @@
 **Services Status**
 | ID | Status | Server | Migration Delay (ms) |
 |----|--------|--------|----------------------|
-| 1 |  Available | 1 | 400.50 |
-| 2 |  Available | 2 | 300.75 |
-| 3 |  Available | 2 | 302.00 |
+| 1 |  Available | 2 | 1.53 |
+| 2 |  Available | 2 | 2.55 |
+| 3 |  Available | 2 | 2.90 |
 
 ** Server Resource Utilization**
 | ID | CPU | GPU | Disk | Memory | BW | Hosted Services |
 |:--:|:---:|:---:|:----:|:------:|:--:|:----------------|
-| 1 | 0.0% | 0.0% | 0.0% | 0.0% | 0.0% | Service_1 |
-| 2 | 0.0% | 0.0% | 0.0% | 0.0% | 0.0% | Service_2, Service_3 |
+| 1 | 0.0% | 0.0% | 0.0% | 0.0% | 0.0% | None |
+| 2 | 0.0% | 0.0% | 0.0% | 0.0% | 0.0% | Service_1, Service_2, Service_3 |
 ============================================================

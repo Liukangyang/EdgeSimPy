@@ -150,7 +150,7 @@ class Topology(ComponentManager, nx.Graph, Agent):
                 
                 link["delay"] = (float)(link["distance"]*1e3/link["link_speed"])
                 if(service!=None and single_path[i].__class__==NetworkSwitch):                       
-                   link["delay"] += (float)((single_path[i].queue[single_path[i+1]][service.qos].get_Qlen()+service.disk_demand)/link["bandwidth"]*1e6)
+                   link["delay"] += (float)((single_path[i].queue[single_path[i+1]][service.qos].get_Qlen()+service.disk_demand)/(link["bandwidth"]*1e6))
         
         path = nx.shortest_path(
             G=self,
