@@ -1,0 +1,32 @@
+{
+  "_log_step": "N/A",
+  "flow_data": {
+    "id": 3,
+    "status": "active",
+    "nodes": [
+      {
+        "type": "NetworkSwitch",
+        "id": 2
+      },
+      {
+        "type": "EdgeServer",
+        "id": 2
+      }
+    ],
+    "path": [
+      "NetworkSwitch__2",
+      "NetworkSwitch__3",
+      "NetworkSwitch__6",
+      "EdgeServer__2"
+    ],
+    "start": 3,
+    "end": null,
+    "data_to_transfer": 1,
+    "bandwidth": {
+      "2": null,
+      "5": null,
+      "7": null
+    },
+    "sustain_steps": 2
+  }
+}

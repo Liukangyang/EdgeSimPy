@@ -69,6 +69,9 @@ class Service(ComponentManager, Agent):
         self.disk_demand = ssd_size #SSD
         self.memory_demand = memory_demand #RAM
         self.bw_demand = bw_demand  #MB
+        
+        # if occupy server's resource
+        self.resource_occupy = False
           
         # Service state
         self.state = state
@@ -171,7 +174,9 @@ class Service(ComponentManager, Agent):
             "Available": self._available,
             "Server": self.server.id if self.server else None,
             "Being Provisioned": self.being_provisioned,
-            "Last Migration": last_migration,
+            "Last Migration": last_migration if last_migration else {},
+            #"delay":self.delay,
+            "path":self.path
         }
         return metrics
 

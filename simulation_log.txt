@@ -1,0 +1,86 @@
+
+==================================================
+ Step: 5 | Time: 2026-01-29 22:50:53
+
+ Services
+{ 'Instance ID': 1,
+  'Available': True,
+  'Server': 1,
+  'Being Provisioned': False,
+  'Last Migration': { 'status': 'finished',
+                      'origin': 'NetworkSwitch_1',
+                      'target': 'EdgeServer_1',
+                      'start': 2,
+                      'end': 5,
+                      'waiting': 0,
+                      'pulling': 3,
+                      'migr_state': 0,
+                      'delay': 400.5031},
+  'path': [NetworkSwitch_1, NetworkSwitch_3, NetworkSwitch_4, NetworkSwitch_5, EdgeServer_1]}
+
+{ 'Instance ID': 2,
+  'Available': True,
+  'Server': 2,
+  'Being Provisioned': False,
+  'Last Migration': { 'status': 'finished',
+                      'origin': 'NetworkSwitch_1',
+                      'target': 'EdgeServer_2',
+                      'start': 2,
+                      'end': 4,
+                      'waiting': 0,
+                      'pulling': 2,
+                      'migr_state': 0,
+                      'delay': 300.75210000000004},
+  'path': [NetworkSwitch_1, NetworkSwitch_3, NetworkSwitch_6, EdgeServer_2]}
+
+{ 'Instance ID': 3,
+  'Available': True,
+  'Server': 2,
+  'Being Provisioned': False,
+  'Last Migration': { 'status': 'finished',
+                      'origin': 'NetworkSwitch_2',
+                      'target': 'EdgeServer_2',
+                      'start': 2,
+                      'end': 4,
+                      'waiting': 0,
+                      'pulling': 2,
+                      'migr_state': 0,
+                      'delay': 302.00210000000004},
+  'path': [NetworkSwitch_2, NetworkSwitch_3, NetworkSwitch_6, EdgeServer_2]}
+
+ Servers
+{ 'Instance ID': 1,
+  'CPU Demand': 0,
+  'GPU Demand': 0,
+  'Disk Demand': 0,
+  'RAM Demand': 0,
+  'bw_demand': 0,
+  'resource_ratio': {'cpu': 0.0, 'gpu': 0.0, 'disk': 0.0, 'memory': 0.0, 'bw': 0.0},
+  'Services': [Service_1]}
+
+{ 'Instance ID': 2,
+  'CPU Demand': 0,
+  'GPU Demand': 0,
+  'Disk Demand': 0,
+  'RAM Demand': 0,
+  'bw_demand': 0,
+  'resource_ratio': {'cpu': 0.0, 'gpu': 0.0, 'disk': 0.0, 'memory': 0.0, 'bw': 0.0},
+  'Services': [Service_2, Service_3]}
+
+
+==================================================
+ QUICK SUMMARY (Markdown Table)
+
+**Services Status**
+| ID | Status | Server | Migration Delay (ms) |
+|----|--------|--------|----------------------|
+| 1 |  Available | 1 | 400.50 |
+| 2 |  Available | 2 | 300.75 |
+| 3 |  Available | 2 | 302.00 |
+
+** Server Resource Utilization**
+| ID | CPU | GPU | Disk | Memory | BW | Hosted Services |
+|:--:|:---:|:---:|:----:|:------:|:--:|:----------------|
+| 1 | 0.0% | 0.0% | 0.0% | 0.0% | 0.0% | Service_1 |
+| 2 | 0.0% | 0.0% | 0.0% | 0.0% | 0.0% | Service_2, Service_3 |
+============================================================

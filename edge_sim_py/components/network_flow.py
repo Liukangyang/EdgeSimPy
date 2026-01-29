@@ -110,7 +110,7 @@ class NetworkFlow(ComponentManager, Agent):
             "end": self.end,
             "data_to_transfer": self.data_to_transfer,
             "bandwidth": self.bandwidth,
-            "metadata": self.metadata,
+            #"metadata": self.metadata,
             "sustain_steps":self.sustain_steps
         }
         return dictionary

@@ -19,6 +19,10 @@ import networkx as nx
 import numpy as np
 import random
 
+import pprint
+from datetime import datetime
+import json
+
 # 用户步进：实现对访问应用的状态转化，以及访问路径和时延的更新
 def User_step(self):
         # Updating user access
@@ -47,14 +51,16 @@ def User_step(self):
                     # 为应用设置访问路径
                     self.set_communication_path(app=app)
                     app.end_time = current_step  #结束时间应当为开始时间加上模拟的完成时延
-                    #TODO：释放服务器资源
+                    #TODO：释放服务器资源(要避免重复释放资源)
                     for service in app.services:
-                        server = service.server
-                        server.cpu_demand -= service.cpu_demand
-                        server.gpu_demand -= service.cpu_demand
-                        server.ssd_demand -= service.disk_demand
-                        server.memory_demand -= service.memory_demand
-                        server.bw_demand -= service.bw_demand
+                        if service.resource_occupy:
+                            server = service.server
+                            server.cpu_demand -= service.cpu_demand
+                            server.gpu_demand -= service.gpu_demand
+                            server.disk_demand -= service.disk_demand
+                            server.memory_demand -= service.memory_demand
+                            server.bw_demand -= service.bw_demand
+                            service.resource_occupy = False
             """
             # Updating user's making requests attribute for the next time step
             if current_step  >= app.start_time and app.status!="over":
@@ -152,10 +158,8 @@ def User_compute_delay(self, app: object, metric: str = "latency")->float:
             #for path in self.communication_paths[str(app.id)]:
                 #delay += topology.calculate_path_delay(path=path)
             # 基于服务累积时延
-            for service in services_available:
+            for service in [s for s in app.services if s._available]:
                 delay += service.delay   #service.delay由服务部署时provision函数计算赋值
-                
-
             if metric.lower() == "response time":
                 # We assume that Response Time = Latency * 2
                 delay = delay * 2
@@ -176,9 +180,9 @@ def Service_Step(self):
         migration = self._Service__migrations[-1]
         # 获取目标服务器上有没有对应的下载流量
         service_on_download_queue=[
-            flow.metadata["service"]
+            flow.metadata["object"]
             for flow in migration["target"].download_queue
-            if flow.metadata["service"].id==self.id
+            if flow.metadata["type"] == "service" and flow.metadata["object"].id==self.id
         ]
         if migration["status"] == "waiting":
             if len(service_on_download_queue) > 0:
@@ -278,6 +282,7 @@ def Service_Provision(self,target_server: object):
         target_server.disk_demand += self.disk_demand
         target_server.memory_demand += self.memory_demand
         target_server.bw_demand += self.bw_demand   
+        self.resource_occupy = True
         
         
         # Updating the service's migration status
@@ -346,15 +351,14 @@ def NetworkFlow_Step(self):
 def EdgeServer_Step(self):
     # 更新资源池带宽统计
     #self.bw_demand = sum([service.bw_demand for service in self.services if not service.finished_flag])
-    
     while len(self.waiting_queue) > 0 and (len(self.download_queue) < self.max_concurrent_layer_downloads):
         unload_service = self.waiting_queue.pop(0)
 
         # 为该服务创建网络�??
         flow = NetworkFlow(
                 topology=self.model.topology,
-                source=unload_service.src,  #服务源节�??
-                target=self.network_switch, #目标为该服务�??
+                source=unload_service.src,  #服务源网关交换机
+                target=self, #目标为该服务器
                 start=self.model.schedule.steps + 1,
                 path=unload_service.path, #传输路径由服务对象提供，由provision在调度时实现路径计�?
                 bandwidth_demand=unload_service.bw_demand,
@@ -362,6 +366,9 @@ def EdgeServer_Step(self):
                 metadata={"type": "service", "object": unload_service},
                 sustain_steps=unload_service.sustain_steps # 模拟持续步长
             )
+        # TODO:输出网络流量属性
+        log_network_flow(flow = flow)
+        
         self.model.initialize_agent(agent=flow)
         #将流量加入到目标服务器的下载队列�??
         self.download_queue.append(flow) 
@@ -391,7 +398,7 @@ def has_capacity_to_host(self,service:object)-> bool:
 def NetworkSwitch_Step(self):
     pass
 
-# 交换机绑定队�?
+# 交换机绑定队列
 def addQueue(self,target:object=None,cache_len:int = 0,threshold_len:int=0,
                  qos:int=1,active:bool=True):
         if target==None:
@@ -430,7 +437,7 @@ def __get_match_degree(parameters,service,target_server)->float:
             service = service
         )
         # 时延匹配度
-        delay_match_degree = np.exp(parameters["k1"]*delay)
+        delay_match_degree = np.exp(-parameters["k1"]*delay)
         # 预估资源负载均衡度（如何获取服务部署资源池的负载均衡度）
         resource_ratio ={
             "cpu": (service.cpu_demand + target_server.cpu_demand) / target_server.cpu,
@@ -440,7 +447,7 @@ def __get_match_degree(parameters,service,target_server)->float:
             "cpu": (service.bw_demand + target_server.bw_demand) / target_server.bw, 
         }
         ratio_list = [ratio for key,ratio  in resource_ratio.items()]
-        resource_match_degree = np.exp(parameters["k2"] * np.var(ratio_list))
+        resource_match_degree = np.exp(-parameters["k2"] * np.var(ratio_list))
         # 综合资源匹配度
         match_degree = parameters["alpha"] * delay_match_degree + \
             parameters["beta"] * resource_match_degree
@@ -490,6 +497,7 @@ def My_Schedule(parameters:dict):
                         select_server = server
                         match_degree = server_degree
             if select_server!=None:
+                service.match_degree = match_degree
                 service.provision(target_server = select_server)
 
 
@@ -498,8 +506,214 @@ def Stop_func()->bool:
     # 所有应用都部署且流转完成
     return all(app.status=="finished" for app in Application.all())
 
+# 打印统计量
+def printResult(Simulator:object=None):
+    # 当前步数
+    if Simulator:
+        print(f"step:{Simulator.schedule.steps}")
+    # 1.打印各服务的参数
+    '''
+    部署决策：服务器
+    时延：delay
+    服务路径：path
+    '''
+    print("Service:")
+    for service in Service.all():
+        service_metrics = service.collect()
+        print(service_metrics)
+        print()
     
+    # 2.打印服务器的参数
+    '''
+    各资源占用量
+    服务列表
+    '''
+    print("Server")
+    for server in EdgeServer.all():
+        server_metrics = server.collect()
+        print(server_metrics)
+        print()
+    
+    print("======================================")
 
 
-     
+def printResult2(
+    Simulator: object = None,
+    output_file: str = "simulation_log.txt",
+    print_to_console: bool = True,
+    add_markdown_summary: bool = True
+):
+    """
+    打印并保存模拟结果到文件（格式化+可选Markdown摘要）
+    
+    Args:
+        Simulator: 模拟器对象（含schedule.steps）
+        output_file: 输出文件路径（None=仅控制台；默认追加模式）
+        print_to_console: 是否同时输出到控制台
+        add_markdown_summary: 是否在文件末尾添加Markdown表格摘要（提升可读性）
+    """
+    # ===== 1. 构建格式化内容 =====
+    lines = []
+    
+    # 分隔标识（每步开始前添加，避免首行空分隔）
+    if output_file and Simulator and hasattr(Simulator.schedule, 'steps') and Simulator.schedule.steps > 0:
+        lines.append("\n" + "="*50)
+    
+    # 当前步数
+    if Simulator and hasattr(Simulator.schedule, 'steps'):
+        step_line = f" Step: {Simulator.schedule.steps} | Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        lines.append(step_line)
+        if print_to_console:
+            print(step_line)
+    
+    # --- Services 部分 ---
+    lines.append("\n Services")
+    if print_to_console:
+        print("\n Services")
+    
+    service_summaries = []  # 用于Markdown摘要
+    for service in Service.all():
+        metrics = service.collect()
+        # 格式化字典（保持原顺序，缩进清晰）
+        formatted = pprint.pformat(metrics, indent=2, width=100, sort_dicts=False)
+        lines.append(formatted)
+        lines.append("")  # 空行分隔
         
+        # 收集摘要数据（用于Markdown表格）
+        if add_markdown_summary:
+            sid = metrics.get('Instance ID', 'N/A')
+            status = " Available" if metrics.get('Available') else " Provisioning"
+            server = metrics.get('Server', 'N/A')
+            delay = metrics["Last Migration"].get("delay","N/A") if "Last Migration" in metrics else 'N/A'
+            service_summaries.append([sid, status, server, f"{delay:.2f}" if isinstance(delay, (int, float)) else delay])
+        
+        
+        if print_to_console:
+            print(formatted)
+            print()
+    
+    # --- Servers 部分 ---
+    lines.append(" Servers")
+    if print_to_console:
+        print(" Servers")
+    
+    
+    server_summaries = []
+    RESOURCE_KEYS = ['cpu', 'gpu', 'disk', 'memory', 'bw']  # 严格按需顺序
+    for server in EdgeServer.all():
+        metrics = server.collect()
+        formatted = pprint.pformat(metrics, indent=2, width=100, sort_dicts=False)
+        lines.append(formatted + "\n")
+        
+        if add_markdown_summary:
+            sid = metrics.get('Instance ID', 'N/A')
+            res_ratio = metrics.get('resource_ratio', {})
+            # 安全提取并格式化所有资源比例（缺失值显示为0.0%）
+            ratios = []
+            for key in RESOURCE_KEYS:
+                val = res_ratio.get(key)
+                try:
+                    pct = float(val) if val is not None else 0.0
+                    ratios.append(f"{pct:.1f}%")
+                except (TypeError, ValueError):
+                    ratios.append("ERR")
+            services_str = ', '.join(str(s) for s in metrics.get('Services', [])) or "None"
+            server_summaries.append([sid] + ratios + [services_str])
+        
+ 
+        
+        if print_to_console:
+            print(formatted)
+            print()
+    
+    # ===== 2. 添加Markdown摘要（显著提升可读性）=====
+    if add_markdown_summary and (service_summaries or server_summaries):
+        lines.append("\n" + "="*50)
+        lines.append(" QUICK SUMMARY (Markdown Table)")
+        
+        if service_summaries:
+            lines.append("\n**Services Status**")
+            lines.append("| ID | Status | Server | Migration Delay (ms) |")
+            lines.append("|----|--------|--------|----------------------|")
+            for row in service_summaries:
+                lines.append(f"| {row[0]} | {row[1]} | {row[2]} | {row[3]} |")
+            lines.append("")
+        
+# Servers 资源表（完整五资源）
+        if server_summaries:
+            lines.append("** Server Resource Utilization**")
+            lines.append("| ID | CPU | GPU | Disk | Memory | BW | Hosted Services |")
+            lines.append("|:--:|:---:|:---:|:----:|:------:|:--:|:----------------|")
+            for row in server_summaries:
+                # row: [id, cpu, gpu, disk, memory, bw, services]
+                lines.append(f"| {row[0]} | {row[1]} | {row[2]} | {row[3]} | {row[4]} | {row[5]} | {row[6]} |")
+    
+    lines.append("="*60 + "\n")
+    
+    # ===== 3. 输出到控制台 & 文件 =====
+    full_content = "\n".join(lines)
+    
+    #if print_to_console:
+    print(full_content, end="")
+    
+    if output_file:
+        try:
+            with open(output_file, 'w', encoding='utf-8') as f:
+                f.write(full_content)
+            if print_to_console:
+                print(f" Results appended to: {output_file}")
+        except Exception as e:
+            if print_to_console:
+                print(f" Warning: Failed to write to file: {e}")
+
+    return full_content  # 可选：返回内容供进一步处理   
+        
+# 记录流量
+def log_network_flow(
+    flow: object,
+    log_file: str = "network_flows.json",
+    add_timestamp: bool = True,
+    validate: bool = False
+) -> bool:
+    """
+    将 NetworkFlow 对象以 JSON Lines 格式追加到日志文件
+    
+    Args:
+        flow: NetworkFlow 实例（需实现 _to_dict() 方法）
+        log_file: 输出文件路径（.jsonl 格式）
+        add_timestamp: 是否在每条记录添加写入时间戳（不影响原始数据）
+        validate: 是否验证序列化结果（避免损坏日志文件）
+    
+    Returns:
+        bool: 写入成功返回 True，失败返回 False
+    """
+    try:
+        # 1. 获取原始字典（严格调用题目指定方法）
+        if not hasattr(flow, '_to_dict') or not callable(getattr(flow, '_to_dict')):
+            raise AttributeError("Object missing required '_to_dict()' method")
+        data = flow._to_dict()
+        data["path"] = [f"{type(p).__name__}_{p.id}" for p in data["path"]]
+        # 2. 
+        if add_timestamp:
+            record = {
+                #"_log_timestamp": datetime.now().isoformat(),
+                "_log_step": getattr(flow, 'current_step', 'N/A'),  # 若模拟器提供当前步数
+                "flow_data": data
+            }
+        else:
+            record = data
+        
+
+        # 4. 原子写入：先写临时行，再追加换行（避免半行损坏）
+        # TODO:将record中的path选项改为类名+id
+        with open(log_file, 'w', encoding='utf-8') as f:
+             json.dump(record, f,ensure_ascii=False, indent=2)
+        
+        return True
+    
+    except (TypeError, ValueError) as e:
+        print(f"Serialization error for flow ID {getattr(flow, 'id', 'unknown')}: {e}")
+        return False
+    except Exception as e:
+        print(f"Unexpected error logging flow: {type(e).__name__}: {e}")
+        return False

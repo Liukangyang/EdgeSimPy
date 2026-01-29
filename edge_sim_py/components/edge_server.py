@@ -181,23 +181,26 @@ class EdgeServer(ComponentManager, Agent):
         """
         metrics = {
             "Instance ID": self.id,
-            "Coordinates": self.coordinates,
-            "Available": self.available,
-            "CPU": self.cpu,
-            "RAM": self.memory,
-            "Disk": self.disk,
+            #"Coordinates": self.coordinates,
+            #"Available": self.available,
+            #"CPU": self.cpu,
+            #"RAM": self.memory,
+            #"Disk": self.disk,
             "CPU Demand": self.cpu_demand,
-            "RAM Demand": self.memory_demand,
+            "GPU Demand": self.gpu_demand,
             "Disk Demand": self.disk_demand,
-            "Ongoing Migrations": self.ongoing_migrations,
-            "Services": [service.id for service in self.services],
-            "Registries": [registry.id for registry in self.container_registries],
-            "Layers": [layer.instruction for layer in self.container_layers],
-            "Images": [image.name for image in self.container_images],
-            "Download Queue": [f.metadata["object"].instruction for f in self.download_queue],
-            "Waiting Queue": [layer.instruction for layer in self.waiting_queue],
-            "Max. Concurrent Layer Downloads": self.max_concurrent_layer_downloads,
-            "Power Consumption": self.get_power_consumption(),
+            "RAM Demand": self.memory_demand,
+            "bw_demand":self.bw_demand,
+            "resource_ratio":self.resource_used_ratio,
+            #"Ongoing Migrations": self.ongoing_migrations,
+            "Services": self.services,
+            #"Registries": [registry.id for registry in self.container_registries],
+            #"Layers": [layer.instruction for layer in self.container_layers],
+            #"Images": [image.name for image in self.container_images],
+            #"Download Queue": [f.metadata["object"].instruction for f in self.download_queue],
+            #"Waiting Queue": [layer.instruction for layer in self.waiting_queue],
+            #"Max. Concurrent Layer Downloads": self.max_concurrent_layer_downloads,
+            #"Power Consumption": self.get_power_consumption(),
         }
         return metrics
 
@@ -352,18 +355,12 @@ class EdgeServer(ComponentManager, Agent):
         disk_demand_delta = sum([layer.size for layer in uncached_layers])
 
         return disk_demand_delta
-
-    # 资源利用率计算
-    def __get_resource_ratio(self)->dict:
-        self.resource_used_ratio["cpu"] = self.cpu_demand / self.cpu
-        self.resource_used_ratio["gpu"] = self.gpu_demand / self.gpu
-        self.resource_used_ratio["disk"] = self.disk_demand / self.disk
-        self.resource_used_ratio["memory"] = self.memory_demand / self.memory
-        self.resource_used_ratio["bw"] = self.bw_demand / self.bw
+ 
+    def _get_resource_ratio(self)->dict:
+        self.resource_used_ratio["cpu"] = self.cpu_demand / self.cpu * 100
+        self.resource_used_ratio["gpu"] = self.gpu_demand / self.gpu * 100
+        self.resource_used_ratio["disk"] = self.disk_demand / self.disk * 100
+        self.resource_used_ratio["memory"] = self.memory_demand / self.memory * 100
+        self.resource_used_ratio["bw"] = self.bw_demand / self.bw * 100
         return self.resource_used_ratio
     
-    # 资源利用率方差
-    def __get_resource_diff(self)->float:
-        self.__get_resource_ratio()
-        ratio_list = [ratio for key,ratio in self.resource_used_ratio.items()]
-        return np.var(ratio_list)

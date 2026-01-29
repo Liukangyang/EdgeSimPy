@@ -85,7 +85,7 @@ NetworkSwitch.addQueue = tools.addQueue
 
 
 #1.导入测试
-#newworkflow schedule algorithm
+#networkflow schedule algorithm
 simulate = Simulator(
     resource_management_algorithm = My_Schedule,
     network_flow_scheduling_algorithm = flow_share,
@@ -94,16 +94,17 @@ simulate = Simulator(
 )
 
 #1.导入测试
-#newworkflow schedule algorithm
+#networkflow schedule algorithm
 simulate = Simulator(
     resource_management_algorithm = My_Schedule,
     network_flow_scheduling_algorithm = flow_share,
     stopping_criterion = Stop_func,
-    resource_management_algorithm_parameters= {"mode":1,"k1":0.2,"k2":0.3,"alpha":0.5,"beta":0.5}
+    resource_management_algorithm_parameters= {"mode":3,"k1":0.2,"k2":0.3,"alpha":0.5,"beta":0.5}
 )
 
-simulate.initialize(input_file="D:\\学习文档资料\\edgesimpy\\EdgeSimPy_srccode\\Test\\test1_data.json")
+simulate.initialize(input_file="D:\\Code\\edgesimpy\\EdgeSimPy\\Test\\test1_data.json")
 datasets = Collect_Components()
+'''
 printComponent(datasets,"User")
 printComponent(datasets,"Application")
 printComponent(datasets,"Service")
@@ -111,15 +112,15 @@ printComponent(datasets,"EdgeServer")
 printComponent(datasets,"BaseStation")
 printComponent(datasets,"NetworkSwitch")
 
-
+'''
 
 while not simulate.stopping_criterion():
     simulate.schedule.steps+=1
     #1.调度器步进
     simulate.resource_management_algorithm_parameters["current_services"] = simulate.current_services
     simulate.resource_management_algorithm(parameters=simulate.resource_management_algorithm_parameters)
-    print(simulate.current_services)
-    print(simulate.schedule.steps)
+    #print(simulate.current_services)
+    #print(simulate.schedule.steps)
     simulate.current_services = []
     #2.网络流步进
     for agent in NetworkFlow.all():
@@ -127,8 +128,9 @@ while not simulate.stopping_criterion():
 
 
     #2.服务器步进
-    for server in EdgeServer.all():
-        print(server.waiting_queue)
+    for agent in EdgeServer.all():
+        #print(agent.waiting_queue)
+        agent.step()
     #未成功实现调度
 
     #3.服务步进
@@ -144,8 +146,7 @@ while not simulate.stopping_criterion():
     for agent in User.all():
         agent.step()
         
-    print(User.all()[0].applications[0].status)
-    print(simulate.current_services)
+    #print(User.all()[0].applications[0].status)
 
     #6.拓扑步进
     for agent in Topology.all():
@@ -157,3 +158,12 @@ while not simulate.stopping_criterion():
 
     for agent in NetworkLink.all():
         agent.step()
+
+    # 更新各服务器的资源利用率
+    for server in EdgeServer.all():
+        server._get_resource_ratio()
+    # 每次迭代打印统计量
+    tools.printResult2(Simulator=simulate,print_to_console=False)
+    
+#TODO：打印统计变量
+
