@@ -39,6 +39,8 @@ class DefaultScheduler(MesaBaseScheduler):
                 - Container Registries
                 - Applications
         """
+        
+        '''
         for agent in EdgeServer.all():
             agent.step()
 
@@ -65,9 +67,40 @@ class DefaultScheduler(MesaBaseScheduler):
             + ContainerImage.all()
             + Application.all()
         )
+
         for agent in other_agents:
             agent.step()
+        '''
+        
+                
+        # 自定义各类元素调度顺序
+        for agent in Topology.all():
+            agent.step()
 
+        for agent in NetworkFlow.all():
+            agent.step()
+
+        for agent in EdgeServer.all():
+            agent.step()
+
+        for agent in Service.all():
+            agent.step()
+
+        for agent in Application.all():
+            agent.step()
+
+        for agent in User.all():
+            agent.step()
+
+        other_agents = (
+            NetworkSwitch.all()
+            + NetworkLink.all()
+            + BaseStation.all()
+            + ContainerLayer.all()
+            + ContainerImage.all()
+        )
+        for agent in other_agents:
+           agent.step()
         # Advancing simulation
         self.steps += 1
         self.time += 1

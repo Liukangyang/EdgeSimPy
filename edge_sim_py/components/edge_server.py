@@ -12,6 +12,7 @@ from mesa import Agent
 # Python libraries
 import networkx as nx
 import typing
+import numpy as np
 
 
 class EdgeServer(ComponentManager, Agent):
@@ -87,15 +88,15 @@ class EdgeServer(ComponentManager, Agent):
         self.gpu_demand = 0
         self.disk_demand = 0
         self.memory_demand = 0
-        self.bw_demand = 0
+        self.bw_demand = 0 
         
         # resource used ratio
         self.resource_used_ratio={
-            "cpu":0,
-            "gpu":0,
-            "disk":0,
-            "memory":0,
-            "bw":0,
+            "cpu":.0,
+            "gpu":.0,
+            "disk":.0,
+            "memory":.0,
+            "bw":.0,
         }
 
         # Edge server's availability status
@@ -122,7 +123,7 @@ class EdgeServer(ComponentManager, Agent):
         self.download_queue = []
 
         # Number of container layers the edge server can download simultaneously (default = 3)
-        self.max_concurrent_layer_downloads = 3
+        self.max_concurrent_layer_downloads = 10
 
         # Model-specific attributes (defined inside the model's "initialize()" method)
         self.model = None
@@ -351,3 +352,18 @@ class EdgeServer(ComponentManager, Agent):
         disk_demand_delta = sum([layer.size for layer in uncached_layers])
 
         return disk_demand_delta
+
+    # 资源利用率计算
+    def __get_resource_ratio(self)->dict:
+        self.resource_used_ratio["cpu"] = self.cpu_demand / self.cpu
+        self.resource_used_ratio["gpu"] = self.gpu_demand / self.gpu
+        self.resource_used_ratio["disk"] = self.disk_demand / self.disk
+        self.resource_used_ratio["memory"] = self.memory_demand / self.memory
+        self.resource_used_ratio["bw"] = self.bw_demand / self.bw
+        return self.resource_used_ratio
+    
+    # 资源利用率方差
+    def __get_resource_diff(self)->float:
+        self.__get_resource_ratio()
+        ratio_list = [ratio for key,ratio in self.resource_used_ratio.items()]
+        return np.var(ratio_list)

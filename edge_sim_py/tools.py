@@ -9,12 +9,15 @@ from edge_sim_py.components.edge_server import EdgeServer
 from edge_sim_py.components.user import User
 from edge_sim_py.components.service import Service
 from edge_sim_py.components.queue import Queue
+from edge_sim_py.components.application import Application
 
 # Mesa modules
 from mesa import Agent
 
 # Python libraries
 import networkx as nx
+import numpy as np
+import random
 
 # 用户步进：实现对访问应用的状态转化，以及访问路径和时延的更新
 def User_step(self):
@@ -22,22 +25,36 @@ def User_step(self):
         current_step = self.model.schedule.steps
         for app in self.applications:
             last_access = self.access_patterns[str(app.id)].history[-1]
-            #将当前需部署应用的服务加入到仿真器服务调度队列当�??############
+            #将当前需部署应用的服务加入到仿真器服务调度队列当�??############
             if app.status == "init" and current_step >= app.start_time:
+                self.communication_paths[str(app.id)] = []
+                self._compute_delay(app=app)
+                # 将服务加入到调度列表当中
                 for service in app.services:
                     self.model.current_services.append(service)
                 app.status = "wait"
             # 遍历应用状�?
             elif app.status == "wait":
                     last_access["waiting_time"] += 1
-                    self.communication_paths[str(app.id)] = []
-                    self._compute_delay(app=app)
-            elif app.status == "access": #等待计算
+                    #若服务未被调度器处理，则会导致服务丢失
+                    for service in app.services:
+                       if (service.server == None) and (service not in self.model.current_services): #还未被调度，重新加入到simulator的调度列表中
+                           self.model.current_services.append(service)
+                                      
+            if app.status == "access": #等待计算
                         last_access["access_time"] += 1
-            elif app.status == "finished":  
+            if app.status == "finished":  
+                    # 为应用设置访问路径
                     self.set_communication_path(app=app)
-                    app.end_time = current_step  #TODO:结束时间应当为开始时间加上模拟的完成时延
-
+                    app.end_time = current_step  #结束时间应当为开始时间加上模拟的完成时延
+                    #TODO：释放服务器资源
+                    for service in app.services:
+                        server = service.server
+                        server.cpu_demand -= service.cpu_demand
+                        server.gpu_demand -= service.cpu_demand
+                        server.ssd_demand -= service.disk_demand
+                        server.memory_demand -= service.memory_demand
+                        server.bw_demand -= service.bw_demand
             """
             # Updating user's making requests attribute for the next time step
             if current_step  >= app.start_time and app.status!="over":
@@ -49,7 +66,7 @@ def User_step(self):
         if len(self.coordinates_trace) <= self.model.schedule.steps and self.mobility_model!=None:
             self.mobility_model(self)
 
-# 更新用户访问应用的路�?
+# 更新用户访问应用的路�?
 def User_path(self, app: object, communication_path: list = [])->list:
         """Updates the set of links used during the communication of user and its application.
 
@@ -71,52 +88,45 @@ def User_path(self, app: object, communication_path: list = [])->list:
         if len(communication_path) > 0:
             self.communication_paths[str(app.id)] = communication_path
         else:
-            #没有指定的路�?
+            #没有指定的路�?
             self.communication_paths[str(app.id)] = []
 
-            service_hosts_server = [service.server for service in app.services if service.server]
-            communication_chain = [self.base_station] + service_hosts_server # 用户基站+服务器所处基�?
+            service_hosts_server = [{"service":service,"server":service.server} for service in app.services if service.server]
+            communication_chain = [self.base_station.network_switch] + service_hosts_server
 
             # Defining a set of links to connect the items in the application's service chain
             for i in range(len(communication_chain) - 1):
 
                 # Defining origin and target nodes
                 origin = communication_chain[i]
-                target = communication_chain[i + 1]
+                target = communication_chain[i + 1]["server"]
 
                 # Finding and storing the best communication path between the origin and target nodes
                 if origin == target:
                     path = []
                 else:
-                    path = self.model.topology._shortest_path(
-                        origin = origin.network_switch,
+                    path,delay = self.model.topology._shortest_path(
+                        origin = origin,
                         target = target, #target_server
                         weight="delay",
-                        method="dijkstra"
-                    )
-                    """
-                    path = nx.shortest_path(
-                        G=topology,
-                        source=origin.network_switch, #用户基站关联的交换机
-                        target=target.network_switch,  #服务部署服务器关联的交换�?
-                        weight="delay",
                         method="dijkstra",
-                    )"""
+                        service = communication_chain[i + 1]["service"]
+                        )
 
                 # Adding the best path found to the communication path
                 #self.communication_paths[str(app.id)].append([network_switch.id for network_switch in path])
                 self.communication_paths[str(app.id)].append([network_switch for network_switch in path])
                 # Computing the new demand of chosen links
-                path = [[network_switch for network_switch in p] for p in self.communication_paths[str(app.id)]]
+                path = [p for p in self.communication_paths[str(app.id)]]
                 
-                # 将应用添加到经过的每跳链路当�?
+                # 将应用添加到经过的每跳链路当�?
                 topology._allocate_communication_path(communication_path=path, app=app)
 
         # Computing application's delay
         self._compute_delay(app=app, metric="latency")        
         return self.communication_paths[str(app.id)] 
 
-#
+# 更新用户应用时延
 def User_compute_delay(self, app: object, metric: str = "latency")->float:
         """Computes the delay of an application accessed by the user.
 
@@ -139,8 +149,12 @@ def User_compute_delay(self, app: object, metric: str = "latency")->float:
             delay = self.base_station.wireless_delay
 
             # Adding the communication path delay to the application's delay
-            for path in self.communication_paths[str(app.id)]:
-                delay += topology.calculate_path_delay(path=path)
+            #for path in self.communication_paths[str(app.id)]:
+                #delay += topology.calculate_path_delay(path=path)
+            # 基于服务累积时延
+            for service in services_available:
+                delay += service.delay   #service.delay由服务部署时provision函数计算赋值
+                
 
             if metric.lower() == "response time":
                 # We assume that Response Time = Latency * 2
@@ -151,13 +165,12 @@ def User_compute_delay(self, app: object, metric: str = "latency")->float:
 
         return delay
 
-
-#应用步进：实现对应用结束状态的判断
+# 应用步进：实现对应用结束状态的判断
 def Application_Step(self):
-        if any(service._Service__migrations[-1]["status"]=="finished" for service in self.services if len(service._Service__migrations)>0):
+        if any(service._available == True for service in self.services):
             self.status = "finished"
 
-#服务步进：实现服务部�??/迁移的状态转�??
+# 服务步进：实现服务部�??/迁移的状态转�??
 def Service_Step(self):
     if len(self._Service__migrations) > 0 and self._Service__migrations[-1]["end"] == None:
         migration = self._Service__migrations[-1]
@@ -173,12 +186,12 @@ def Service_Step(self):
         
         #流量下载完成
         if migration["status"] == "pulling_layers" and self.finished_flag:
-            #迁移：假设服务只从用户产生，不会占用本地服务器资�??
+            #迁移：假设服务只从用户产生，不会占用本地服务器资�??
             """
             if self.server:
                     self.server.cpu_demand -= self.cpu_demand
                     self.server.gpu_demand -= self.cpu_demand
-                    self.server.ssd_demand -= self.ssd_size
+                    self.server.ssd_demand -= self.disk_demand
                     self.server.memory_demand -= self.memory_demand
                     self.server.bw_demand -= self.bw_demand
             """
@@ -193,7 +206,7 @@ def Service_Step(self):
         elif migration["status"] == "migrating_service_state":
                 migration["migrating_service_state_time"] += 1
                 
-        if migration["status"] == "finished" and  not migration["updated"]: #服务已完�??
+        if migration["status"] == "finished" and not migration["updated"]: #服务已完�??
                 migration["end"] = self.model.schedule.steps 
                 migration["updated"] = True
                 
@@ -215,12 +228,14 @@ def Service_Step(self):
                 self._available = True  #服务可用 
                 self.being_provisioned = False
                 
-                #更新用户访问的路�??
+                #更新用户访问的路�??
                 # Changing the routes used to communicate the application that owns the service to its users
+                """
                 app = self.application
                 users = app.users
                 for user in users:
                     user.set_communication_path(app)
+                """
 
 #服务提供provision
 def Service_Provision(self,target_server: object):
@@ -236,11 +251,12 @@ def Service_Provision(self,target_server: object):
         target_server.services.append(self)
         self.server = target_server
         
-        # 计算服务最短路�?
-        #源：用户所在出口交换机 目的：目标服务器关联交换�?
+        # 计算服务最短路�?
+        #源：用户所在出口交换机 目的：目标服务器关联交换�?
         # self.path = self.model.topology._shortest_path(origin=self.src,target=target_server.network_switch, weight="delay",method="dijkstra")
         #源：用户所在出口交换机 目的：目标服务器
-        self.path = self.model.topology._shortest_path(origin=self.src,target=target_server, weight="delay",method="dijkstra")
+        self.path,self.delay = self.model.topology._shortest_path(origin=self.src,target=target_server, weight="delay",method="dijkstra",service=self)
+ 
         
         # 设定流量可用带宽
         """
@@ -259,7 +275,7 @@ def Service_Provision(self,target_server: object):
         target_server.ongoing_migrations += 1
         target_server.cpu_demand += self.cpu_demand
         target_server.gpu_demand += self.gpu_demand
-        target_server.disk_demand += self.ssd_size
+        target_server.disk_demand += self.disk_demand
         target_server.memory_demand += self.memory_demand
         target_server.bw_demand += self.bw_demand   
         
@@ -278,15 +294,22 @@ def Service_Provision(self,target_server: object):
                 "updated":False,
             }
         )
-                    
-# 网络流传�??
+             
+# 网络流传�??
 def NetworkFlow_Step(self):
        if self.status == "active":
+            '''
             # Updating the flow progress according to the available bandwidth
             if not any([bw == None for bw in self.bandwidth.values()]):
-                # 模拟单步1s的传�? => 后续可将其转化为定时调度事件
+                # 模拟单步1s的传�? => 后续可将其转化为定时调度事件
                 self.data_to_transfer -= min(self.bandwidth.values())
-
+            '''
+            if self.sustain_steps > 0:
+                 self.sustain_steps -= 1
+                 
+            if   self.sustain_steps == 0:
+                 self.data_to_transfer = 0
+                 
             if self.data_to_transfer <= 0:
                 # Updating the completed flow's properties
                 self.data_to_transfer = 0
@@ -319,29 +342,33 @@ def NetworkFlow_Step(self):
                     service = self.metadata["object"]
                     service._Service__migrations[-1]["status"] = "finished"   
 
-# 资源池步�??
+# 资源池步�??
 def EdgeServer_Step(self):
+    # 更新资源池带宽统计
+    #self.bw_demand = sum([service.bw_demand for service in self.services if not service.finished_flag])
+    
     while len(self.waiting_queue) > 0 and (len(self.download_queue) < self.max_concurrent_layer_downloads):
         unload_service = self.waiting_queue.pop(0)
 
-        # 为该服务创建网络�??
+        # 为该服务创建网络�??
         flow = NetworkFlow(
                 topology=self.model.topology,
-                source=unload_service.src,  #服务源节�??
-                target=self.network_switch, #目标为该服务�??
+                source=unload_service.src,  #服务源节�??
+                target=self.network_switch, #目标为该服务�??
                 start=self.model.schedule.steps + 1,
                 path=unload_service.path, #传输路径由服务对象提供，由provision在调度时实现路径计�?
                 bandwidth_demand=unload_service.bw_demand,
-                data_to_transfer=unload_service.ssd_size,
+                data_to_transfer=unload_service.disk_demand,
                 metadata={"type": "service", "object": unload_service},
+                sustain_steps=unload_service.sustain_steps # 模拟持续步长
             )
         self.model.initialize_agent(agent=flow)
-        #将流量加入到目标服务器的下载队列�??
+        #将流量加入到目标服务器的下载队列�??
         self.download_queue.append(flow) 
         #
         unload_service.application.status="access"
 
-#资源池判断是否有足够的资�??
+# 资源池判断是否有足够的资�??
 def has_capacity_to_host(self,service:object)-> bool:
         # Calculating the edge server's free resources
         free_cpu = self.cpu - self.cpu_demand
@@ -360,13 +387,13 @@ def has_capacity_to_host(self,service:object)-> bool:
         can_host = all(free_resources[key]>= getattr(service,key+"_demand")for key in self.model.resources_list)
         return can_host
 
-#交换机步�?
+# 交换机步�?
 def NetworkSwitch_Step(self):
     pass
 
-#交换机绑定队�?
+# 交换机绑定队�?
 def addQueue(self,target:object=None,cache_len:int = 0,threshold_len:int=0,
-                 qos:int=0,active:bool=True):
+                 qos:int=1,active:bool=True):
         if target==None:
             raise Exception("add queue error:can't add a none object!")
 
@@ -376,10 +403,10 @@ def addQueue(self,target:object=None,cache_len:int = 0,threshold_len:int=0,
             self.model.initialize_agent(agent=queue)
 
         # 建立关联关系
-        self.queue[target.id] = {}
-        self.queue[target.id][queue.qos]=queue #每个QOS一个队�?
+        self.queue[target] = {}
+        self.queue[target][queue.qos]=queue #每个QOS一个队�?
 
-#Simulator步进
+# Simulator步进
 def Simulator_Step(self):
     if len(self.current_services)>0:
         self.resource_management_algorithm_parameters["current_services"] = self.current_services
@@ -387,22 +414,91 @@ def Simulator_Step(self):
         self.current_services=[]
     # Activating agents
     self.schedule.step()
-    
+    # 迭代步数+1
     self.resource_management_algorithm_parameters["current_step"] = self.schedule.steps + 1
 
+ 
+# 资源匹配度计算#
+def __get_match_degree(parameters,service,target_server)->float:
+        #TODO：到目标服务器的预估时延计算 
+        
+        path,delay = Topology.all()[0]._shortest_path(
+            origin=service.src,
+            target=target_server,
+            weight="delay",
+            method="dijkstra",
+            service = service
+        )
+        # 时延匹配度
+        delay_match_degree = np.exp(parameters["k1"]*delay)
+        # 预估资源负载均衡度（如何获取服务部署资源池的负载均衡度）
+        resource_ratio ={
+            "cpu": (service.cpu_demand + target_server.cpu_demand) / target_server.cpu,
+            "gpu": (service.gpu_demand + target_server.gpu_demand) / target_server.gpu,
+            "disk": (service.disk_demand + target_server.disk_demand) / target_server.disk,
+            "cpu": (service.memory_demand + target_server.memory_demand) / target_server.memory,
+            "cpu": (service.bw_demand + target_server.bw_demand) / target_server.bw, 
+        }
+        ratio_list = [ratio for key,ratio  in resource_ratio.items()]
+        resource_match_degree = np.exp(parameters["k2"] * np.var(ratio_list))
+        # 综合资源匹配度
+        match_degree = parameters["alpha"] * delay_match_degree + \
+            parameters["beta"] * resource_match_degree
+            
+        #TODO:待增加路径时延与服务sla时延的比较########
+        
+        return match_degree
 
-# 自定义调度算�??
+# 自定义调度算法
 def My_Schedule(parameters:dict):
-    #1.遍历可部署服务列�??
-    for service in parameters["current_services"]:
-        #2.寻找适合的服务器
-        for server in EdgeServer.All():
-            if server.has_capacity_to_host(service):
-                #部署服务
-                service.privsison(target_server = server)
-                break
+    servers = EdgeServer.all()
+    # 不同的资源匹配算法
+    if parameters["mode"] == 1: #首次适应匹配          
+        #1.遍历可部署服务列�??
+        for service in parameters["current_services"]:
+            #2.寻找适合的服务器
+            for server in servers:
+                if server.has_capacity_to_host(service):
+                    #部署服务
+                    service.provision(target_server = server)
+                    break
+
+    elif parameters["mode"] == 2: #随机匹配
+        if len(servers)>0:
+            for service in parameters["current_services"]:
+                #随机寻找服务器
+                select_server = None
+                count = 0
+                while count<= 10:
+                    server = random.choice(servers)
+                    if server.has_capacity_to_host(service):
+                        select_server = server
+                        break
+                    count+=1
+                if select_server != None:
+                    select_server.provision(target_server = server)
+
+    elif parameters["mode"] == 3: #综合资源匹配度匹配
+        #TODO：先按服务顺序遍历，每个服务选取资源匹配度最高的服务器
+        for service in parameters["current_services"]:
+            select_server = None
+            match_degree = .0
+            for server in servers:
+                if server.has_capacity_to_host(service) :
+                    server_degree = __get_match_degree(parameters,service,server)
+                    if server_degree > match_degree:
+                        select_server = server
+                        match_degree = server_degree
+            if select_server!=None:
+                service.provision(target_server = select_server)
 
 
+# 仿真停止函数
+def Stop_func()->bool:
+    # 所有应用都部署且流转完成
+    return all(app.status=="finished" for app in Application.all())
+
+    
 
 
      

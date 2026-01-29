@@ -12,8 +12,8 @@ class Queue(ComponentManager,Agent):
     # 全局对象
     _instances = []
     _object_count = 0
-    def __init__(self, obj_id:int = None, model:object= None,cache_len:int = 0,threshold_len:int=0,
-                 qos:int=0,active:bool=True,network_switch:object=None,target:object=None)->object:
+    def __init__(self, obj_id:int = None, model:object= None,cache_len:int = 1000,threshold_len:int=1000,
+                 qos:int=1,active:bool=True,network_switch:object=None,target:object=None)->object:
         """Creates a NetworkQueue object.
 
         Args:

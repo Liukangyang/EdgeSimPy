@@ -60,8 +60,8 @@ class NetworkLink(dict, ComponentManager, Agent):
         self["unique_id"] = None
         
         # link distance and link speed
-        self["distance"] = 100.0
-        self["link_speed"] = 2e8
+        self["distance"] = 100.0 #km
+        self["link_speed"] = 2e8 #m/s
 
     def __getattr__(self, attribute_name: str):
         """Retrieves an object attribute by its name.

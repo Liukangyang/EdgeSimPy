@@ -17,7 +17,7 @@ from typing import Callable
 from datetime import timedelta
 from urllib.parse import urlparse
 from urllib.request import urlopen
-
+import numpy as np
 SUPPORTED_TIME_UNITS = ["seconds", "microseconds", "milliseconds", "minutes"]
 
 
@@ -27,6 +27,7 @@ class Simulator(ComponentManager, Model):
     # Class attributes that allow this class to use helper methods from ComponentManager
     _instances = []
     _object_count = 0
+    
 
     def __init__(
         self,
@@ -39,9 +40,9 @@ class Simulator(ComponentManager, Model):
         tick_unit: str = "seconds",
         obj_id: int = None,
         scheduler: Callable = DefaultScheduler,
-        dump_interval: int = 100,
+        dump_interval: int = 1,
         logs_directory: str = "logs",
-        resource_need:list = []
+        resource_need:list = ["cpu","gpu","disk","memory","bw"]
     ) -> object:
         """Creates a Simulator object.
 
@@ -181,7 +182,7 @@ class Simulator(ComponentManager, Model):
         for key in data.keys():
             if key != "Simulator" and key != "Topology":
                 for object_metadata in data[key]:
-                    #根据属性字典创建对�?
+                    #根据属性字典创建对�?
                     new_component = globals()[key]._from_dict(dictionary=object_metadata["attributes"])
                     #保存依赖关系
                     new_component.relationships = object_metadata["relationships"]
@@ -219,7 +220,7 @@ class Simulator(ComponentManager, Model):
                     setattr(component, f"{key}", attribute_values)
 
                 # Defining attributes that reference a single component (e.g., an edge server, an user, etc.)
-               # 关联一个对�?
+               # 关联一个对�?
                 elif type(value) == dict and "class" in value and "id" in value:
                     obj = (
                         globals()[value["class"]].find_by_id(value["id"])
@@ -274,14 +275,14 @@ class Simulator(ComponentManager, Model):
             topology._adj[link.nodes[0]][link.nodes[1]] = link
             topology._adj[reverse_link.nodes[0]][reverse_link.nodes[1]] = reverse_link
             
-        # 补充�?
+        # 补充�?
         #1.将用户每个应用的时延sla赋值给相应应用
         for user in User.all():
             for id,delay_sla in user.delay_slas.items():
                 app = Application.find_by_id(int(id))
                 if app:
                     setattr(app,"delay_sla",delay_sla)
-        #2.设置每个服务的起始节�?
+        #2.设置每个服务的起始节�?
         for service in Service.all():
             src = service.application.users[0].base_station.network_switch if service.application and len(service.application.users)>0 else None
             setattr(service,"src",src)
@@ -291,9 +292,10 @@ class Simulator(ComponentManager, Model):
             node2 = link.nodes[1]
             if(node1.__class__==NetworkSwitch): #node1->node2
                 node1.addQueue(target=node2,cache_len=1000,threshold_len=1000,qos=1,active=True)
-            if(node2.__class__==NetworkSwitch): #node2->node1
-                node2.addQueue(target=node1,cache_len=1000,threshold_len=1000,qos=1,active=True)
-
+        # 更新每个服务器的总带宽
+        for server in EdgeServer.all():
+            switch = server.network_switch
+            server.bw = self.topology[switch][server]["bandwidth"]
             
     def run_model(self):
         """Executes the simulation."""
@@ -330,6 +332,7 @@ class Simulator(ComponentManager, Model):
         # Updating the "current_step" attribute inside the resource management algorithm's parameters
         self.resource_management_algorithm_parameters["current_step"] = self.schedule.steps + 1
 
+    # TODO:收集统计信息输出
     def collect(self) -> dict:
         """Method that collects a set of model-level metrics.
 
@@ -356,7 +359,7 @@ class Simulator(ComponentManager, Model):
                 self.agent_metrics[f"{agent.__class__.__name__}"].append(metrics)
 
         if self.schedule.steps == self.last_dump + self.dump_interval:
-            self.dump_data_to_disk()
+            #self.dump_data_to_disk()            
             self.last_dump = self.schedule.steps
 
     def dump_data_to_disk(self, clean_data_in_memory: bool = True) -> None:

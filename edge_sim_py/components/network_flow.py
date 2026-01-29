@@ -25,6 +25,7 @@ class NetworkFlow(ComponentManager, Agent):
         bandwidth_demand:int = 0,
         data_to_transfer: int = 0,
         metadata: dict = {},
+        sustain_steps:int = 1
     ) -> object:
         """Creates a NetworkFlow object.
 
@@ -78,6 +79,9 @@ class NetworkFlow(ComponentManager, Agent):
 
         # Custom flow metadata
         self.metadata = metadata
+        
+        # 模拟持续步长
+        self.sustain_steps = sustain_steps
 
         # Adding a reference to the flow inside the network links that comprehend the "path" attribute
         if(len(path)>0):
@@ -107,6 +111,7 @@ class NetworkFlow(ComponentManager, Agent):
             "data_to_transfer": self.data_to_transfer,
             "bandwidth": self.bandwidth,
             "metadata": self.metadata,
+            "sustain_steps":self.sustain_steps
         }
         return dictionary
 

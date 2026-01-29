@@ -5,6 +5,8 @@ from edge_sim_py.component_manager import ComponentManager
 # Mesa modules
 from mesa import Agent
 
+import numpy as np
+
 
 class Application(ComponentManager, Agent):
     """Class that represents an application."""
@@ -12,7 +14,7 @@ class Application(ComponentManager, Agent):
     # Class attributes that allow this class to use helper methods from the ComponentManager
     _instances = []
     _object_count = 0
-
+    
     def __init__(self, obj_id: int = None, label: str = "",start_time: int = 1,delay_sla: int = 0) -> object:
         """Creates an Application object.
 
@@ -52,6 +54,7 @@ class Application(ComponentManager, Agent):
         self.status = "init" # init->wait->access->finished
         self.delay_sla = delay_sla
         
+        #
 
     def _to_dict(self) -> dict:
         """Method that overrides the way the object is formatted to JSON."

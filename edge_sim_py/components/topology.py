@@ -2,6 +2,7 @@
 # EdgeSimPy components
 from edge_sim_py.component_manager import ComponentManager
 from edge_sim_py.components.network_flow import NetworkFlow
+from edge_sim_py.components.network_switch import NetworkSwitch
 from  copy import *
 # Mesa modules
 from mesa import Agent
@@ -137,14 +138,39 @@ class Topology(ComponentManager, nx.Graph, Agent):
                     if app in link["applications"]:
                         link["applications"].remove(app)
 
-    def _shortest_path(self,origin:object=None,target:object=None, weight="delay",method="dijkstra")->list:
-        path = nx.shortest_path(
-                        G=self,
-                        source=origin, #用户基站关联的交换机
-                        target=target,  #服务部署服务器关联的交换机
-                        weight=weight,
-                        method=method,
-                    )
-        # 待扩展排队时延的计算#############
+#源到目的地的最短路径计算
+    def _shortest_path(self,origin:object=None,target:object=None, weight="delay",method="dijkstra",service:object = None):
         
-        return path
+        # 待扩展排队时延的计算#############
+        all_paths = nx.all_simple_paths(G=self,source=origin,target = target)
+        for single_path in all_paths:
+            for  i in range(len(single_path)-1):
+                link = self[single_path[i]][single_path[i+1]]
+                #更新link时延
+                
+                link["delay"] = (float)(link["distance"]*1e3/link["link_speed"])
+                if(service!=None and single_path[i].__class__==NetworkSwitch):                       
+                   link["delay"] += (float)((single_path[i].queue[single_path[i+1]][service.qos].get_Qlen()+service.disk_demand)/link["bandwidth"]*1e6)
+        
+        path = nx.shortest_path(
+            G=self,
+            source = origin,
+            target = target,
+            weight="delay",
+            method="dijkstra"
+        )
+        
+        # 同时更新时延
+        network_delay = 0
+        for i in range(len(path)-1):
+            link = self[path[i]][path[i+1]]
+            network_delay += link["delay"]
+            
+        # 添加服务器侧处理时延
+        t_Comm = service.disk_demand / target.bw
+        t_Comp =  (max(service.flops_load["cpu"] / (service.cpu_demand*target.Cabability["cpu"]),
+                      service.flops_load["gpu"] / (service.gpu_demand*target.Cabability["gpu"])) + 
+                 (service.disk_demand /target.memory) * (target.memory / target.Cabability["pcie"]))
+        server_delay = t_Comm + t_Comp
+        total_delay = network_delay + server_delay
+        return path,total_delay

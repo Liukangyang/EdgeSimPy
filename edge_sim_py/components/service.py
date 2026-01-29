@@ -18,19 +18,21 @@ class Service(ComponentManager, Agent):
     # Class attributes that allow this class to use helper methods from the ComponentManager
     _instances = []
     _object_count = 0
-
+    
     def __init__(
         self,
         obj_id: int = None,
         image_digest: str = "",
         label: str = "",
-        flops_load: int = 0,
+        flops_load: dict={},
         cpu_demand: int = 0,
         gpu_demand: int = 0,
         ssd_size: int = 0,
         memory_demand: int = 0,
         bw_demand: int = 0,
         state: int = 0,
+        qos:int = 1,
+        sustain_steps:int = 1
     ) -> object:
         """Creates a Service object.
 
@@ -64,7 +66,7 @@ class Service(ComponentManager, Agent):
         self.flops_load = flops_load #工作负载(flops)
         self.cpu_demand = cpu_demand
         self.gpu_demand = gpu_demand
-        self.ssd_size = ssd_size #SSD
+        self.disk_demand = ssd_size #SSD
         self.memory_demand = memory_demand #RAM
         self.bw_demand = bw_demand  #MB
           
@@ -88,6 +90,9 @@ class Service(ComponentManager, Agent):
         
         #finished_delay
         self.delay = 0
+        
+        #qos
+        self.qos = qos
 
         # Service availability and provisioning status
         self._available = False  # Service is not available, for example, when its state is being transferred
@@ -101,7 +106,11 @@ class Service(ComponentManager, Agent):
         self.model = None
         self.unique_id = None
         
-           
+        # 资源匹配度
+        self.match_degree = .0
+        
+        # 服务模拟持续步长
+        self.sustain_steps = sustain_steps
 
     def _to_dict(self) -> dict:
         """Method that overrides the way the object is formatted to JSON."
@@ -118,12 +127,13 @@ class Service(ComponentManager, Agent):
                 "flops_load": self.flops_load,
                 "cpu_demand": self.cpu_demand,
                 "gpu_demand": self.gpu_demand,
-                "ssd_demand": self.ssd_size,
+                "ssd_demand": self.disk_demand,
                 "memory_demand": self.memory_demand,
                 "bw_demand": self.bw_demand,
                 "delay":self.delay,
                 "finished":self.finished_flag,
-                "src":self.src
+                "src":self.src,
+                "sustain_steps:":self.sustain_steps
                 #"image_digest": self.image_digest,
             },
             "relationships": {

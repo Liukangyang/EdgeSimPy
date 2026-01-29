@@ -460,13 +460,18 @@
                 "label": "service1",
                 "state": 0,
                 "_available": false,
-                "flops_load":[100,200],
-                "cpu_demand": 1,
-                "gpu_demand": 1,
-                "ssd_size": 1,
+                "flops_load":
+                {
+                    "cpu":100,
+                    "gpu":200
+                },
+                "cpu_demand": 2,
+                "gpu_demand": 3,
+                "disk_demand": 1,
                 "memory_demand": 2048,
                 "bw_demand":100,
-                "image_digest": "sha256:a777c9c66ba177ccfea23f2a216ff6721e78a662cd17019488c417135299cd89"
+                "image_digest": "sha256:a777c9c66ba177ccfea23f2a216ff6721e78a662cd17019488c417135299cd89",
+                "sustain_steps":3
             },
             "relationships": {
                 "application": {
@@ -482,13 +487,17 @@
                 "label": "service2",
                 "state": 0,
                 "_available": false,
-                "flops_load":[200,300],
-                "cpu_demand": 1,
-                "gpu_demand": 1,
-                "ssd_size": 1,
+                "flops_load":{
+                    "cpu":200,
+                    "gpu":300
+                },
+                "cpu_demand": 2,
+                "gpu_demand": 2,
+                "disk_demand": 1,
                 "memory_demand": 2048,
                 "bw_demand":100,
-                "image_digest": "sha256:a777c9c66ba177ccfea23f2a216ff6721e78a662cd17019488c417135299cd89"
+                "image_digest": "sha256:a777c9c66ba177ccfea23f2a216ff6721e78a662cd17019488c417135299cd89",
+                "sustain_steps":2
             },
             "relationships": {
                 "application": {
@@ -504,13 +513,17 @@
                 "label": "service3",
                 "state": 0,
                 "_available": false,
-                "flops_load":[300,400],
-                "cpu_demand": 1,
+                "flops_load":{
+                    "cpu":300,
+                    "gpu":400
+                },
+                "cpu_demand": 3,
                 "gpu_demand": 1,
-                "ssd_size": 1,
+                "disk_demand": 1,
                 "memory_demand": 2048,
                 "bw_demand":100,
-                "image_digest": "sha256:a777c9c66ba177ccfea23f2a216ff6721e78a662cd17019488c417135299cd89"
+                "image_digest": "sha256:a777c9c66ba177ccfea23f2a216ff6721e78a662cd17019488c417135299cd89",
+                "sustain_steps":2
             },
             "relationships": {
                 "application": {
@@ -548,7 +561,7 @@
             "attributes": {
                 "id": 2,
                 "label": "app2",
-                "start_time":2
+                "start_time":1
             },
             "relationships": {
                 "services": [
@@ -569,7 +582,7 @@
             "attributes": {
                 "id": 3,
                 "label": "app3",
-                "start_time":3
+                "start_time":1
             },
             "relationships": {
                 "services": [
