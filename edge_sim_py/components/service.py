@@ -176,7 +176,8 @@ class Service(ComponentManager, Agent):
             "Being Provisioned": self.being_provisioned,
             "Last Migration": last_migration if last_migration else {},
             #"delay":self.delay,
-            "path":self.path
+            "path":self.path,
+            "match_degree":self.match_degree
         }
         return metrics
 

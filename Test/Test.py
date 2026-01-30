@@ -80,6 +80,7 @@ EdgeServer.step = tools.EdgeServer_Step
 EdgeServer.has_capacity_to_host = tools.has_capacity_to_host
 #simulator
 Simulator.step = tools.Simulator_Step
+Simulator.run_model = tools.Simulator_Run_model
 #networkswitch
 NetworkSwitch.addQueue = tools.addQueue
 
@@ -93,17 +94,19 @@ simulate = Simulator(
     resource_management_algorithm_parameters= {"mode":3,"k1":0.2,"k2":0.3,"alpha":0.5,"beta":0.5}
 )
 
-simulate.initialize(input_file="D:\\Code\\edgesimpy\\EdgeSimPy\\Test\\test1_data.json")
+simulate.initialize(input_file="D:\\学习文档资料\\edgesimpy\\EdgeSimPy_srccode\\Test\\test1_data.json")
 datasets = Collect_Components()
-
+'''
 printComponent(datasets,"User")
 printComponent(datasets,"Application")
 printComponent(datasets,"Service")
 printComponent(datasets,"EdgeServer")
 printComponent(datasets,"BaseStation")
-printComponent(datasets,"NetworkSwitch")
+'''
 
-
+#Simulator仿真
+simulate.run_model()
+'''
 while not simulate.stopping_criterion():
     simulate.schedule.steps+=1
     #1.调度器步进
@@ -137,10 +140,10 @@ while not simulate.stopping_criterion():
         agent.step()
     for agent in NetworkLink.all():
         agent.step()
-    # 更新各服务器的资源利用率
+    # 更新各服务器资源利用率
     for server in EdgeServer.all():
         server._get_resource_ratio()
     # 每次迭代打印统计量
-    tools.printResult2(Simulator=simulate,print_to_console=False)
+    tools.printResult(Simulator=simulate,print_to_console=False)
 #TODO：打印统计变量
-
+'''

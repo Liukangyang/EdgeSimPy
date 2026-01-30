@@ -1,6 +1,6 @@
 
 ==================================================
- Step: 7 | Time: 2026-01-30 00:06:59
+ Step: 7 | Time: 2026-01-30 11:50:21
 
  Services
 { 'Instance ID': 1,
@@ -15,8 +15,9 @@
                       'waiting': 0,
                       'pulling': 3,
                       'migr_state': 0,
-                      'delay': 1.5348339333333332},
-  'path': [NetworkSwitch_1, NetworkSwitch_3, NetworkSwitch_6, EdgeServer_2]}
+                      'delay': 5.3348363333333335},
+  'path': [NetworkSwitch_1, NetworkSwitch_3, NetworkSwitch_6, EdgeServer_2],
+  'match_degree': np.float64(0.6718181807136083)}
 
 { 'Instance ID': 2,
   'Available': True,
@@ -30,8 +31,9 @@
                       'waiting': 0,
                       'pulling': 2,
                       'migr_state': 0,
-                      'delay': 2.5515008999999997},
-  'path': [NetworkSwitch_1, NetworkSwitch_3, NetworkSwitch_6, EdgeServer_2]}
+                      'delay': 14.001509},
+  'path': [NetworkSwitch_1, NetworkSwitch_3, NetworkSwitch_6, EdgeServer_2],
+  'match_degree': np.float64(0.528499092924891)}
 
 { 'Instance ID': 3,
   'Available': True,
@@ -40,13 +42,14 @@
   'Last Migration': { 'status': 'finished',
                       'origin': 'NetworkSwitch_2',
                       'target': 'EdgeServer_2',
-                      'start': 5,
-                      'end': 7,
+                      'start': 4,
+                      'end': 6,
                       'waiting': 0,
                       'pulling': 2,
                       'migr_state': 0,
-                      'delay': 2.90150045},
-  'path': [NetworkSwitch_2, NetworkSwitch_3, NetworkSwitch_6, EdgeServer_2]}
+                      'delay': 18.834845333333337},
+  'path': [NetworkSwitch_2, NetworkSwitch_3, NetworkSwitch_6, EdgeServer_2],
+  'match_degree': np.float64(0.5049294636392508)}
 
  Servers
 { 'Instance ID': 1,
@@ -72,11 +75,11 @@
  QUICK SUMMARY (Markdown Table)
 
 **Services Status**
-| ID | Status | Server | Migration Delay (ms) |
-|----|--------|--------|----------------------|
-| 1 |  Available | 2 | 1.53 |
-| 2 |  Available | 2 | 2.55 |
-| 3 |  Available | 2 | 2.90 |
+| ID | Status | Server | Delay (s) | Match Degree |
+|----|--------|--------|-----------|--------------|
+| 1 |  Release | 2 | 5.33 | 0.6718181807136083 
+| 2 |  Release | 2 | 14.00 | 0.528499092924891 
+| 3 |  Release | 2 | 18.83 | 0.5049294636392508 
 
 ** Server Resource Utilization**
 | ID | CPU | GPU | Disk | Memory | BW | Hosted Services |

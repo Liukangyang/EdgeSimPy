@@ -18,6 +18,8 @@ from datetime import timedelta
 from urllib.parse import urlparse
 from urllib.request import urlopen
 import numpy as np
+import zmq
+
 SUPPORTED_TIME_UNITS = ["seconds", "microseconds", "milliseconds", "minutes"]
 
 
@@ -127,6 +129,13 @@ class Simulator(ComponentManager, Model):
         
         # current service needed to place
         self.current_services = [] 
+        
+        # zmq
+        self.socket = None
+        self.dst_port = 5555
+        # 订阅方zmq，
+        self.sub_dst_port = 5556
+        self.sub_socket = None 
 
     def initialize(self, input_file: str) -> None:
         """Sets up the initial values for state variables, which includes, e.g., loading components from a dataset file.
@@ -134,6 +143,7 @@ class Simulator(ComponentManager, Model):
         Args:
             input_file (str): Dataset file (URL for external JSON file, path for local JSON file, Python dictionary).
         """
+        
         # Resetting the list of instances of EdgeSimPy's component classes
         for component_class in ComponentManager.__subclasses__():
             if component_class.__name__ != "Simulator":
@@ -296,7 +306,14 @@ class Simulator(ComponentManager, Model):
         for server in EdgeServer.all():
             switch = server.network_switch
             server.bw = self.topology[switch][server]["bandwidth"]
-            
+        
+        #订阅方套接字
+        context = zmq.Context()
+        self.sub_socket = context.socket(zmq.SUB)
+        self.sub_socket.connect(f"tcp://localhost:{self.sub_dst_port}")
+        self.sub_socket.setsockopt_string(zmq.SUBSCRIBE,"flow_finish")
+        # TODO: 订阅方需实时订阅（线程实现）
+
     def run_model(self):
         """Executes the simulation."""
         if self.stopping_criterion == None:
@@ -401,3 +418,21 @@ class Simulator(ComponentManager, Model):
         agent.model.schedule.add(agent)
 
         return agent
+
+    # zmq交互
+    def send_recv_json(self,req_data:dict={}):
+        if not self.socket:
+            context = zmq.Context()
+            self.socket = context.socket(zmq.REQ)
+        
+        self.socket.send_json(req_data)
+        
+        #接收
+        reponse_data = self.socket.recv_json()
+        
+        if reponse_data["data_type"] == "qlen":
+            #TODO:更新各交换机队列长度
+            pass
+        elif reponse_data["data_type"] == "command":
+            #TODO:判断交互是否完成
+            pass

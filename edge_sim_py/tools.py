@@ -10,7 +10,6 @@ from edge_sim_py.components.user import User
 from edge_sim_py.components.service import Service
 from edge_sim_py.components.queue import Queue
 from edge_sim_py.components.application import Application
-
 # Mesa modules
 from mesa import Agent
 
@@ -422,9 +421,28 @@ def Simulator_Step(self):
     # Activating agents
     self.schedule.step()
     # 迭代步数+1
-    self.resource_management_algorithm_parameters["current_step"] = self.schedule.steps + 1
+    self.resource_management_algorithm_parameters["current_step"] = self.schedule.steps
 
- 
+#  Simulator run model
+def Simulator_Run_model(self):
+    """Executes the simulation."""
+    if self.stopping_criterion == None:
+        raise Exception("Please assign the 'stopping_criterion' attribute before starting the simulation.")
+
+    if self.resource_management_algorithm == None:
+        raise Exception("Please assign the 'resource_management_algorithm' attribute before starting the simulation.")
+
+    self.running = True
+    while self.running:
+        #1.调度器步进
+        self.step()
+        
+        #2. call monitor func
+        printResult(Simulator=self,print_to_console=False)
+        
+        #3. Checks if the simulation should end according to the stop condition
+        self.running = False if self.stopping_criterion() else True
+        
 # 资源匹配度计算#
 def __get_match_degree(parameters,service,target_server)->float:
         #TODO：到目标服务器的预估时延计算 
@@ -467,6 +485,7 @@ def My_Schedule(parameters:dict):
             for server in servers:
                 if server.has_capacity_to_host(service):
                     #部署服务
+                    service.match_degree = __get_match_degree(parameters,service,server)
                     service.provision(target_server = server)
                     break
 
@@ -483,6 +502,7 @@ def My_Schedule(parameters:dict):
                         break
                     count+=1
                 if select_server != None:
+                    service.match_degree = __get_match_degree(parameters,service,select_server)
                     service.provision(target_server = select_server)
 
     elif parameters["mode"] == 3: #综合资源匹配度匹配
@@ -505,38 +525,8 @@ def Stop_func()->bool:
     # 所有应用都部署且流转完成
     return all(app.status=="finished" for app in Application.all())
 
-# 打印统计量
-def printResult(Simulator:object=None):
-    # 当前步数
-    if Simulator:
-        print(f"step:{Simulator.schedule.steps}")
-    # 1.打印各服务的参数
-    '''
-    部署决策：服务器
-    时延：delay
-    服务路径：path
-    '''
-    print("Service:")
-    for service in Service.all():
-        service_metrics = service.collect()
-        print(service_metrics)
-        print()
-    
-    # 2.打印服务器的参数
-    '''
-    各资源占用量
-    服务列表
-    '''
-    print("Server")
-    for server in EdgeServer.all():
-        server_metrics = server.collect()
-        print(server_metrics)
-        print()
-    
-    print("======================================")
 
-
-def printResult2(
+def printResult(
     Simulator: object = None,
     output_file: str = "simulation_log.txt",
     print_to_console: bool = True,
@@ -581,10 +571,11 @@ def printResult2(
         # 收集摘要数据（用于Markdown表格）
         if add_markdown_summary:
             sid = metrics.get('Instance ID', 'N/A')
-            status = " Available" if metrics.get('Available') else " Provisioning"
+            status = " Release" if metrics.get('Available') else " Provisioning"
             server = metrics.get('Server', 'N/A')
             delay = metrics["Last Migration"].get("delay","N/A") if "Last Migration" in metrics else 'N/A'
-            service_summaries.append([sid, status, server, f"{delay:.2f}" if isinstance(delay, (int, float)) else delay])
+            match_degree  = metrics["match_degree"]
+            service_summaries.append([sid, status, server, f"{delay:.2f}" if isinstance(delay, (int, float)) else delay ,match_degree])
         
         
         if print_to_console:
@@ -632,10 +623,10 @@ def printResult2(
         
         if service_summaries:
             lines.append("\n**Services Status**")
-            lines.append("| ID | Status | Server | Migration Delay (ms) |")
-            lines.append("|----|--------|--------|----------------------|")
+            lines.append("| ID | Status | Server | Delay (s) | Match Degree |")
+            lines.append("|----|--------|--------|-----------|--------------|")
             for row in service_summaries:
-                lines.append(f"| {row[0]} | {row[1]} | {row[2]} | {row[3]} |")
+                lines.append(f"| {row[0]} | {row[1]} | {row[2]} | {row[3]} | {row[4]} ")
             lines.append("")
         
 # Servers 资源表（完整五资源）

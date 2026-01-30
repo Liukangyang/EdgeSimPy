@@ -74,9 +74,6 @@ class DefaultScheduler(MesaBaseScheduler):
         
                 
         # 自定义各类元素调度顺序
-        for agent in Topology.all():
-            agent.step()
-
         for agent in NetworkFlow.all():
             agent.step()
 
@@ -92,6 +89,8 @@ class DefaultScheduler(MesaBaseScheduler):
         for agent in User.all():
             agent.step()
 
+        for agent in Topology.all():
+            agent.step()
         other_agents = (
             NetworkSwitch.all()
             + NetworkLink.all()
@@ -101,6 +100,10 @@ class DefaultScheduler(MesaBaseScheduler):
         )
         for agent in other_agents:
            agent.step()
+        
+        # 更新各服务器资源利用率
+        for server in EdgeServer.all():
+            server._get_resource_ratio()
         # Advancing simulation
         self.steps += 1
         self.time += 1
