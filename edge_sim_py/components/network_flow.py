@@ -104,14 +104,11 @@ class NetworkFlow(ComponentManager, Agent):
         dictionary = {
             "id": self.id,
             "status": self.status,
-            "nodes": [{"type": type(node).__name__, "id": node.id} for node in [self.source,self.target]],
-            "path": self.path,
-            "start": self.start,
-            "end": self.end,
-            "data_to_transfer": self.data_to_transfer,
-            "bandwidth": self.bandwidth,
-            #"metadata": self.metadata,
-            "sustain_steps":self.sustain_steps
+            "nodes": [{"type": type(node).__name__, "id": node.id} for node in [self.source,self.target]], #流量源目节点
+            "path": self.path, #流量路径
+            "start": self.start,  #起始时间
+            "data_to_transfer": self.data_to_transfer, #待传输数据量  
+            "bandwidth": self.bandwidth, # 预计占用带宽
         }
         return dictionary
 

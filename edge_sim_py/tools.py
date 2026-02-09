@@ -22,6 +22,8 @@ import pprint
 from datetime import datetime
 import json
 
+f=None
+
 # 用户步进：实现对访问应用的状态转化，以及访问路径和时延的更新
 def User_step(self):
         # Updating user access
@@ -662,15 +664,16 @@ def printResult(
 def log_network_flow(
     flow: object,
     log_file: str = "network_flows.json",
-    add_timestamp: bool = True,
-    validate: bool = False
+    add_timestamp: bool = False,
+    validate: bool = False,
+    f: object = None
 ) -> bool:
     """
     将 NetworkFlow 对象以 JSON Lines 格式追加到日志文件
     
     Args:
         flow: NetworkFlow 实例（需实现 _to_dict() 方法）
-        log_file: 输出文件路径（.jsonl 格式）
+        log_file: 输出文件路径（.json 格式）
         add_timestamp: 是否在每条记录添加写入时间戳（不影响原始数据）
         validate: 是否验证序列化结果（避免损坏日志文件）
     
@@ -679,9 +682,9 @@ def log_network_flow(
     """
     try:
         # 1. 获取原始字典（严格调用题目指定方法）
-        if not hasattr(flow, '_to_dict') or not callable(getattr(flow, '_to_dict')):
+        if not callable(getattr(flow, '_to_dict')):
             raise AttributeError("Object missing required '_to_dict()' method")
-        data = flow._to_dict()
+        data = flow._to_dict() #通过_to_dict方法获取流量属性
         data["path"] = [f"{type(p).__name__}_{p.id}" for p in data["path"]]
         # 2. 
         if add_timestamp:
@@ -696,9 +699,12 @@ def log_network_flow(
 
         # 4. 原子写入：先写临时行，再追加换行（避免半行损坏）
         # TODO:将record中的path选项改为类名+id
+        if f==None:
+            mode = 'w'
+        else:
+            mode = "a"
         with open(log_file, 'w', encoding='utf-8') as f:
-             json.dump(record, f,ensure_ascii=False, indent=2)
-        
+            json.dump(record, f,ensure_ascii=False, indent=2) #将record以json格式写入文件中
         return True
     
     except (TypeError, ValueError) as e:
@@ -707,3 +713,12 @@ def log_network_flow(
     except Exception as e:
         print(f"Unexpected error logging flow: {type(e).__name__}: {e}")
         return False
+    
+    
+    
+    
+    
+    
+    
+    
+    

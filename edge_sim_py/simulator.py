@@ -19,6 +19,7 @@ from urllib.parse import urlparse
 from urllib.request import urlopen
 import numpy as np
 import zmq
+import threading
 
 SUPPORTED_TIME_UNITS = ["seconds", "microseconds", "milliseconds", "minutes"]
 
@@ -130,12 +131,16 @@ class Simulator(ComponentManager, Model):
         # current service needed to place
         self.current_services = [] 
         
-        # zmq
-        self.socket = None
-        self.dst_port = 5555
-        # 订阅方zmq，
-        self.sub_dst_port = 5556
+        # TODO:添加zmq模块
+        # 1.请求方zmq
+        self.req_socket = None
+        self.req_dst_port = 5555
+        # 订阅方zmq
         self.sub_socket = None 
+        self.sub_dst_port = 5556
+        
+        #订阅方zmq线程
+        self.sub_thread = None
 
     def initialize(self, input_file: str) -> None:
         """Sets up the initial values for state variables, which includes, e.g., loading components from a dataset file.
@@ -307,13 +312,20 @@ class Simulator(ComponentManager, Model):
             switch = server.network_switch
             server.bw = self.topology[switch][server]["bandwidth"]
         
+        # 请求方套接字
+        self.req_context = zmq.Context()
+        self.req_socket = self.req_context.socket(zmq.REQ)
+        self.req_socket.context(f"tcp://localhost:{self.req_dst_port}")
+        
         #订阅方套接字
-        context = zmq.Context()
-        self.sub_socket = context.socket(zmq.SUB)
+        self.sub_context = zmq.Context()
+        self.sub_socket = self.sub_context.socket(zmq.SUB)
         self.sub_socket.connect(f"tcp://localhost:{self.sub_dst_port}")
         self.sub_socket.setsockopt_string(zmq.SUBSCRIBE,"flow_finish")
-        # TODO: 订阅方需实时订阅（线程实现）
-
+        # TODO: 线程实现，以及及时退出
+        self.sub_thread  = threading.Thread(target=self.sub_Socket_func,name="Sub_Thread", args=self)
+        self.sub_thread.start()
+        
     def run_model(self):
         """Executes the simulation."""
         if self.stopping_criterion == None:
@@ -349,7 +361,7 @@ class Simulator(ComponentManager, Model):
         # Updating the "current_step" attribute inside the resource management algorithm's parameters
         self.resource_management_algorithm_parameters["current_step"] = self.schedule.steps + 1
 
-    # TODO:收集统计信息输出
+    # 收集统计信息输出
     def collect(self) -> dict:
         """Method that collects a set of model-level metrics.
 
@@ -419,20 +431,62 @@ class Simulator(ComponentManager, Model):
 
         return agent
 
-    # zmq交互
-    def send_recv_json(self,req_data:dict={}):
-        if not self.socket:
-            context = zmq.Context()
-            self.socket = context.socket(zmq.REQ)
+    #TODO：zmq交互--当有新服务到来时调用
+    def send_recv_flow_json(self,service_data:dict={},type="none"):
+        if not self.req_socket:
+            self.req_context = zmq.Context()
+            self.socket = self.req_context.socket(zmq.REQ)
+            self.socket.connect(f"tcp://localhost:{self.req_dst_port}")
         
-        self.socket.send_json(req_data)
+        if type=="service_req":
+                service_data["type"] = "service_req"
+        elif type=="flow_req":
+                service_data["type"] = "flow_req"
+        else:
+            print("Unknown data type")
+            return
+        #1.发送流量参数
+        self.req_socket.send_json(service_data) 
         
-        #接收
-        reponse_data = self.socket.recv_json()
+        #2.同步接收
+        response_data = self.req_socket.recv_json()
         
-        if reponse_data["data_type"] == "qlen":
-            #TODO:更新各交换机队列长度
-            pass
-        elif reponse_data["data_type"] == "command":
-            #TODO:判断交互是否完成
-            pass
+        if response_data["type"] == "qlen":
+            #更新各交换机队列长度
+            self.update_Switch_qlen(response_data)
+            #TODO：返回后需进行决策并重新发送数据
+        elif response_data["type"] == "command":
+            response_data["finished"] = True
+        return response_data
+
+   #TODO:更新所有交换机设备的队列长度
+    def update_Switch_qlen(self,response_data:dict={}):
+        if response_data=={}:
+            raise Exception("Data is empty")
+        
+        switch_qlens = response_data["qlen"]
+        #解析switch_qlens字典
+        #格式{id1:
+        #       { "neiId1":{qos1:"q1",qos2:"q2"},"neiId2":{qos1:"q1",qos2:"q2"}},
+        #    id2:
+        #        { "neiId1":{qos1:"q1",qos2:"q2"},"neiId2":{qos1:"q1",qos2:"q2"}},
+        #    id3：...
+        #     }
+        for id,qlens in switch_qlens.items():
+            switch = NetworkSwitch.find_by_id(id)
+            for neiId,qlen in qlens.items():
+                for qos,q in qlen.items():
+                    switch.queue[neiId][qos].qlen = q
+    
+    #TODO；订阅方zmq接口任务函数
+    def sub_Socket_func(self):
+        while(True):
+            response_data = self.sub_socket.recv_json()
+            if response_data["type"]=="flow_finished":
+               #新流量完成标记
+               flow = NetworkFlow.find_by_id(obj_id=response_data["id"])
+               flow.status = "finished" #TODO：需相应修改网络流的step函数，根据status判断流量结束
+               flow.end = self.schedule.steps
+            else:
+                print("Recv unknown response data!")
+        return

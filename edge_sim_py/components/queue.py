@@ -12,7 +12,7 @@ class Queue(ComponentManager,Agent):
     # 全局对象
     _instances = []
     _object_count = 0
-    def __init__(self, obj_id:int = None, model:object= None,cache_len:int = 1000,threshold_len:int=1000,
+    def __init__(self, obj_id:int = None, model:object= None,max_len:int = 1000,threshold_len:int=1000,
                  qos:int=1,active:bool=True,network_switch:object=None,target:object=None)->object:
         """Creates a NetworkQueue object.
 
@@ -30,7 +30,7 @@ class Queue(ComponentManager,Agent):
         self.id = obj_id
         
         # max length
-        self.cache_len = cache_len
+        self.max_len = max_len
         # current length
         self.qlen = 0
         #threshold length
@@ -40,7 +40,6 @@ class Queue(ComponentManager,Agent):
         # QOS level
         self.qos = qos
 
-    
         #related NetworkSwitch
         self.network_switch = network_switch
         # related target NetworkSwitch or EdgeServer
@@ -64,7 +63,7 @@ class Queue(ComponentManager,Agent):
             "attributes": {
                 "id": self.id,
                 "active": self.active,
-                "cache_len":self.cache_len,
+                "max_len":self.max_len,
                 "current_len":self.qlen,
                 "threshold":self.threshold_len,
                 "drop_ratio":self.drop_ratio,
