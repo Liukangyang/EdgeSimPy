@@ -1,0 +1,74 @@
+{
+  "CpnRouter":[
+    {
+      "attributes": {
+        "id": 1,
+        "coordinates": [
+          0,
+          3
+        ],
+        "area_ID": 1,
+        "active": true
+      },
+      "relationships": {
+        "links": []
+      }
+    },
+    {
+      "attributes": {
+        "id": 2,
+        "coordinates": [
+          2,
+          2
+        ],
+        "area_ID": 2,
+        "active": true
+      },
+      "relationships": {
+        "links": [],
+        "edge_servers": [
+          {
+            "class": "CpnNode",
+            "id": 1
+          }]
+      }
+    }
+  ],
+  "CpnNode":[
+            {
+            "attributes": {
+                "id": 1,
+                "available": true,
+                "model_name": "Test1",
+                "cpu": 120,
+                "gpu":200,
+                "disk": 2e11,
+                "bandwidth": 1e10,
+                "cpu_flops":1e8,
+                "gpu_flops": 3e9,
+                "pcie_speed": 2e9,
+                "cpu_demand": 0,
+                "gpu_demand":0,
+                "disk_demand": 0,
+                "bw_demand":0,
+                "area_ID": 2,
+                "coordinates": [
+                    2,
+                    1
+                ],
+                "max_concurrent_layer_downloads": 100,
+                "active": true,
+                "power_model_parameters": {}
+            },
+            "relationships": {
+                "power_model": "None",
+                "base_station": {},
+                "network_gw": {
+                    "class": "CpnRouter",
+                    "id": 2
+                },
+                "services": []
+            }
+        }
+  ]
+}

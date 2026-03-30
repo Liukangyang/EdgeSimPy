@@ -14,7 +14,7 @@ class NetworkLink(dict, ComponentManager, Agent):
     _instances = []
     _object_count = 0
 
-    def __init__(self, obj_id: int = None) -> object:
+    def __init__(self, obj_id: int = None,distance:int = None) -> object:
         """Creates a NetworkLink object.
 
         Args:
@@ -57,6 +57,13 @@ class NetworkLink(dict, ComponentManager, Agent):
         # Model-specific attributes (defined inside the model's "initialize()" method)
         self["model"] = None
         self["unique_id"] = None
+
+        # link distance and link speed
+        if distance is not None:
+            self["distance"] = distance #km
+        else: self["distance"] = .0
+        self["link_speed"] = 2e8 #m/s
+
 
     def __getattr__(self, attribute_name: str):
         """Retrieves an object attribute by its name.

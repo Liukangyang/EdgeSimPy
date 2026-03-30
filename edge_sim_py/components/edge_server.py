@@ -100,7 +100,7 @@ class EdgeServer(ComponentManager, Agent):
         self.download_queue = []
 
         # Number of container layers the edge server can download simultaneously (default = 3)
-        self.max_concurrent_layer_downloads = 3
+        self.max_concurrent_layer_downloads = 100
 
         # Model-specific attributes (defined inside the model's "initialize()" method)
         self.model = None
@@ -323,3 +323,5 @@ class EdgeServer(ComponentManager, Agent):
         disk_demand_delta = sum([layer.size for layer in uncached_layers])
 
         return disk_demand_delta
+
+

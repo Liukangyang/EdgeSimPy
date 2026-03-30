@@ -1,4 +1,5 @@
 """ Contains topology-related functionality."""
+from edge_sim_py import NetworkSwitch
 # EdgeSimPy components
 from edge_sim_py.component_manager import ComponentManager
 from edge_sim_py.components.network_flow import NetworkFlow
@@ -135,3 +136,34 @@ class Topology(ComponentManager, nx.Graph, Agent):
 
                     if app in link["applications"]:
                         link["applications"].remove(app)
+
+
+    #TODO:增添函数-自定义计算源到目的地的最佳路径和预期链路时延
+        # 源到目的地的最短路径计算
+    def _shortest_path(self, origin: object = None, target: object = None, weight="delay", method="dijkstra",
+                           service: object = None):
+
+            # 待扩展排队时延的计算#############
+            all_paths = nx.all_simple_paths(G=self, source=origin, target=target)
+            for single_path in all_paths:
+                for i in range(len(single_path) - 1):
+                    link = self[single_path[i]][single_path[i + 1]]
+                    # 更新link时延
+                    link["delay"] = (float)(link["distance"] * 1e3 / link["link_speed"])
+                    # TODO：可更新每条链路上的排队时延或传输数据量
+
+            path = nx.shortest_path(
+                G=self,
+                source=origin,
+                target=target,
+                weight="delay",
+                method="dijkstra"
+            )
+
+            # 同时更新时延
+            link_delay = 0
+            for i in range(len(path) - 1):
+                link = self[path[i]][path[i + 1]]
+                link_delay += link["delay"]
+
+            return path, link_delay
