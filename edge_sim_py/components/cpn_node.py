@@ -1,5 +1,5 @@
 """ Contains edge-server-related functionality."""
-from edge_sim_py import EdgeServer
+from edge_sim_py.components import EdgeServer
 # EdgeSimPy components
 from edge_sim_py.component_manager import ComponentManager
 from edge_sim_py.components.network_flow import NetworkFlow
@@ -16,7 +16,7 @@ import typing
 
 import heapq
 
-class CpnNode(ComponentManager, Agent,EdgeServer):
+class CpnNode(EdgeServer):
     """Class that represents an Cpn_node server."""
 
     # cpn_instances = []
@@ -32,7 +32,7 @@ class CpnNode(ComponentManager, Agent,EdgeServer):
         cpu_flops:float = 0,
         gpu_flops:float = 0,
         pcie_speed:float = 0,
-        area_ID : int = 0,
+        area_ID : int = None,
         power_model: typing.Callable = None) -> object:
         """Creates an Cpn node object.
 
@@ -149,6 +149,14 @@ class CpnNode(ComponentManager, Agent,EdgeServer):
             "Disk Demand": self.disk_demand,
             "Bandwidth Demand": self.bw_demand,
 
+
+            "resource_ratio":{
+                "cpu":self.cpu_demand/self.cpu,
+                "gpu":self.gpu_demand/self.gpu,
+                "disk":self.disk_demand/self.disk,
+                "bw":self.bw_demand/self.bandwidth
+            },
+
             "Services": [service.id for service in self.services],
             "Download Queue": [f.metadata["object"].instruction for f in self.download_queue],
             "Waiting Queue": [layer.instruction for layer in self.waiting_queue],
@@ -161,18 +169,18 @@ class CpnNode(ComponentManager, Agent,EdgeServer):
         #1.从download_queue中提取出当前已经传输完成的流量,将对应服务再放入到计算队列中(按照计算时间降序)
         while(len(self.download_queue)>0):
             trans_sustain_steps,flow=heapq.heappop(self.download_queue)
-            if trans_sustain_steps<=self.model.steps:
+            if trans_sustain_steps<=self.model.schedule.steps:
                 if flow.metadata['type'] == 'service':
                     service = flow.metadata['object']
                     service.status = 'computing'
-                    heapq.heappush(self.compute_queue,(self.model.steps+service.comp_sustain_steps,service))
+                    heapq.heappush(self.compute_queue,(self.model.schedule.steps+service.comp_sustain_steps,service))
             else:#重新插入下载队列中
                 heapq.heappush(self.download_queue,(trans_sustain_steps,flow))
 
         #2.从compute_queue中提取出已完成计算的任务，并释放相应资源
         while(len(self.compute_queue)>0):
              comp_sustain_steps,service = heapq.heappop(self.compute_queue)
-             if comp_sustain_steps <= self.model.steps:
+             if comp_sustain_steps <= self.model.schedule.steps:
                  service.status = 'finished'
                 # clear resources
                  self.cpu_demand -= service.cpu_demand
@@ -196,6 +204,7 @@ class CpnNode(ComponentManager, Agent,EdgeServer):
                 unload_service.status = "loading"
 
             # create network flow for current service
+            #TODO：修改NetworkFlow属性
             flow = NetworkFlow(
                 topology=self.model.topology,
                 source=unload_service.cpn_router,  #service src node
@@ -205,13 +214,13 @@ class CpnNode(ComponentManager, Agent,EdgeServer):
                 bandwidth_demand=unload_service.bw_demand,
                 data_to_transfer=unload_service.disk_demand,
                 metadata={"type": "service", "object": unload_service},
-                sustain_steps=self.model.steps + unload_service.trans_sustain_steps  # 模拟持续步长
+                sustain_steps=self.model.schedule.steps + unload_service.trans_sustain_steps  # 模拟持续步长
             )
 
             self.model.initialize_agent(agent=flow)
             # add flow to download_queue
             heapq.heappush(self.download_queue,(flow.sustain_steps,flow))
-
+        self.waiting_queue= []
         #更新算力节点上的任务状态
         self.update()
 

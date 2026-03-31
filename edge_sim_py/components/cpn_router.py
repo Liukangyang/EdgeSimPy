@@ -1,8 +1,7 @@
 """ Contains network-switch-related functionality."""
-from edge_sim_py import NetworkSwitch
 # EdgeSimPy components
 from edge_sim_py.component_manager import ComponentManager
-
+from edge_sim_py.components import NetworkSwitch
 # Mesa modules
 from mesa import Agent
 
@@ -10,13 +9,45 @@ from mesa import Agent
 import copy
 
 
-class CpnRouter(ComponentManager,Agent,NetworkSwitch):
-    def __init__(self,obj_id: int = None,area_ID: int = None,model:object = None):
-        NetworkSwitch.__init__(self,obj_id)
+class CpnRouter(ComponentManager, Agent):
+    # Class attributes that allow this class to use helper methods from ComponentManager
+    _instances = []
+    _object_count = 0
+    def __init__(self,obj_id: int = None,area_ID: int = None,model:object = None,controller:object = None):
+        # Adding the new object to the list of instances of its class
+        self.__class__._instances.append(self)
+
+        # Object's class instance ID
+        self.__class__._object_count += 1
+        if obj_id is None:
+            obj_id = self.__class__._object_count
+        self.id = obj_id
+
+        # Network switch coordinates
+        self.coordinates = None
+
+        # List of edge servers connected to the switch
+        self.edge_servers = []
+
+        # List of links connected to the switch ports
+        self.links = []
+
+        # Power Features
+        self.active = True
+        self.power_model = None
+        self.power_model_parameters = {}
+
+        # Model-specific attributes (defined inside the model's "initialize()" method)
+        self.model = model
+        self.unique_id = None
+
         self.area_ID = area_ID
         self.services = []
 
         self.model = model
+
+        #控制器
+        self.controller = controller
 
 
     def _to_dict(self) -> dict:
@@ -38,9 +69,6 @@ class CpnRouter(ComponentManager,Agent,NetworkSwitch):
                     {"class": type(edge_server).__name__, "id": edge_server.id} for edge_server in self.edge_servers
                 ],
                 "links": [{"class": type(link).__name__, "id": link.id} for link in self.links],
-                "base_station": {"class": type(self.base_station).__name__, "id": self.base_station.id}
-                if self.base_station
-                else None,
                 "service": [{"class":type(service).__name__,'id':service.id}for service in self.services]
             },
         }
@@ -49,7 +77,8 @@ class CpnRouter(ComponentManager,Agent,NetworkSwitch):
 
 
     def step(self):
-        #TODO：将当前任务列表中的任务放入调度器中
-        self.model.cpn_scheduler.schedule_services.append(self.services)
+        #TODO：将当前任务列表中的任务放入控制器中，控制器为Controller类型
+        for service in self.services:
+            self.controller.schedule_services.append(service)
         # 清空任务队列
         self.services = []

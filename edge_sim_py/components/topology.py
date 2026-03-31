@@ -1,5 +1,4 @@
 """ Contains topology-related functionality."""
-from edge_sim_py import NetworkSwitch
 # EdgeSimPy components
 from edge_sim_py.component_manager import ComponentManager
 from edge_sim_py.components.network_flow import NetworkFlow
@@ -149,7 +148,7 @@ class Topology(ComponentManager, nx.Graph, Agent):
                 for i in range(len(single_path) - 1):
                     link = self[single_path[i]][single_path[i + 1]]
                     # 更新link时延
-                    link["delay"] = (float)(link["distance"] * 1e3 / link["link_speed"])
+                    link["delay"] += (float)(link["distance"] * 1e3 / link["link_speed"])
                     # TODO：可更新每条链路上的排队时延或传输数据量
 
             path = nx.shortest_path(

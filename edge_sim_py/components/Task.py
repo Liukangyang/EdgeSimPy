@@ -1,10 +1,11 @@
 """ Contains service-related functionality."""
-from edge_sim_py import Service, NetworkSwitch
+# EdgeSimPy components
+from edge_sim_py.components import Service, NetworkSwitch
 # EdgeSimPy components
 from edge_sim_py.component_manager import ComponentManager
 from edge_sim_py.components.container_image import ContainerImage
 from edge_sim_py.components.container_layer import ContainerLayer
-from edge_sim_py.components.cpn_node import Cpn_Node
+from edge_sim_py.components.cpn_node import CpnNode
 from edge_sim_py.components.cpn_router import CpnRouter
 from edge_sim_py.components.network_flow import NetworkFlow
 
@@ -15,7 +16,7 @@ import math
 import networkx as nx
 
 
-class Task(ComponentManager, Agent,Service):
+class Task( Service):
 
     Mtu = 1500
     history_instances=[]
@@ -30,7 +31,7 @@ class Task(ComponentManager, Agent,Service):
         max_delay: float = 0,
         price_gamma:float = 0,
         state: int = 0,
-        area_ID:int = 0,cpn_router:object=None)->object:
+        area_ID:int = None,cpn_router:object=None)->object:
 
        Service.__init__(self,obj_id=obj_id,label= label,cpu_demand=cpu_demand,state=state)
        self.gpu_demand = gpu_demand
@@ -138,18 +139,19 @@ class Task(ComponentManager, Agent,Service):
         #1.rectify task's status
         self.status = 'scheduled'
         self.server = target_server
-        # target_server.services.append(self)
-        #2.occupy target server's resources
+        #2.add task to target server's waiting
+        target_server.waiting_queue.append(self)
+        #3.occupy target server's resources
         target_server.cpu_demand += self.cpu_demand
         target_server.gpu_demand += self.gpu_demand
         target_server.disk_demand += self.disk_demand
         target_server.bw_demand += self.bw_demand
 
-        #2.compute shortest path
+        #4.compute shortest path
         #TODO：定义_shortest_path函数
         self.path,link_delay = self.model.topology._shortest_path(origin=self.cpn_router,target=target_server,
                                                                   weight="delay",method="dijkstra",service=self)
-        #3. compute delay
+        #4. compute delay
         pcie_time = self.disk_demand / target_server.pcie_speed
         cpu_time = self.flops_demand['cpu'] / (self.cpu_demand * target_server.cpu_flops)
         gpu_time = self.flops_demand['gpu'] / (self.gpu_demand * target_server.gpu_flops)
@@ -157,7 +159,7 @@ class Task(ComponentManager, Agent,Service):
         self.comp_sustain_steps = max(cpu_time, gpu_time)
         #TODO:self.trans_sustain_steps = self.disk_demand / self.bw_demand + (len(self.path)-2) * (self.__class__.Mtu/self.bw_demand + Thop) + \link_delay
         #TODO:先忽略平均每跳处理时延
-        self.trans_sustain_steps = self.disk_demand / self.bw_demand + (len(self.path)-2) * (self.__class__.Mtu/self.bw_demand) + \
+        self.trans_sustain_steps = self.disk_demand*1e9 / (self.bw_demand*1e9) + (len(self.path)-2) * (self.__class__.Mtu/(self.bw_demand*1e9)) + \
                                    link_delay
 
         #TODO:资源定价计算和效用计算
@@ -165,8 +167,6 @@ class Task(ComponentManager, Agent,Service):
         total_time = self.trans_sustain_steps + self.comp_sustain_steps
         self.efficiency = math.exp(-( total_time + self.price_gamma * self.resource_cost ))
 
-        #3.add task to target server's waiting
-        target_server.waiting_queue.append(self)
         self.being_provisioned = True
 
 

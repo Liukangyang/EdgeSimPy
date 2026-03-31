@@ -28,7 +28,7 @@ class Simulator(ComponentManager, Model):
 
     def __init__(
         self,
-        stopping_criterion: Callable = None,
+        stopping_criterion: Callable = None,  # 停止标准
         resource_management_algorithm: Callable = None,
         resource_management_algorithm_parameters: dict = {},
         user_defined_functions: list = [],
@@ -36,7 +36,7 @@ class Simulator(ComponentManager, Model):
         tick_duration: int = 1,
         tick_unit: str = "seconds",
         obj_id: int = None,
-        scheduler: Callable = DefaultScheduler,
+        scheduler: Callable = DefaultScheduler,  #调度器
         dump_interval: int = 100,
         logs_directory: str = "logs",
     ) -> object:
@@ -118,6 +118,7 @@ class Simulator(ComponentManager, Model):
         # Adding the new object to the list of instances of its class
         self.__class__._instances.append(self)
 
+    # 根据配置文件初始化
     def initialize(self, input_file: str) -> None:
         """Sets up the initial values for state variables, which includes, e.g., loading components from a dataset file.
 
@@ -238,7 +239,7 @@ class Simulator(ComponentManager, Model):
                 else:
                     raise Exception(f"Couldn't add the relationship {key} with value {value}. Please check your dataset.")
 
-        # Filling the network topology
+        # 构建拓扑结构
         for link in NetworkLink.all():
             # Adding the nodes connected by the link to the topology
             topology.add_node(link.nodes[0])

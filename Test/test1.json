@@ -1,74 +1,413 @@
 {
   "CpnRouter":[
+
     {
       "attributes": {
         "id": 1,
         "coordinates": [
-          0,
+          2,
           3
         ],
-        "area_ID": 1,
-        "active": true
-      },
-      "relationships": {
-        "links": []
-      }
-    },
-    {
-      "attributes": {
-        "id": 2,
-        "coordinates": [
-          2,
-          2
-        ],
-        "area_ID": 2,
+        "area_ID": 3,
         "active": true
       },
       "relationships": {
         "links": [],
+        "controller": {
+          "class": "Controller",
+          "id": 1
+        },
         "edge_servers": [
           {
             "class": "CpnNode",
-            "id": 1
-          }]
+            "id": 3
+          }
+        ]
       }
     }
+  ],
+  "Task": [
+  {
+        "attributes": {
+          "id": 1,
+          "flops_demand": {
+            "cpu": 1e12,
+            "gpu": 2e11
+          },
+          "cpu_demand":10,
+          "gpu_demand": 20,
+          "disk_demand": 20,
+          "min_bw_demand": 2,
+          "max_delay": 10,
+          "price_gamma": 2,
+          "area_ID": 3,
+          "active": true
+        },
+      "relationships": {
+            }
+      },
+    {
+        "attributes": {
+          "id": 2,
+          "flops_demand": {
+            "cpu": 5e11,
+            "gpu": 1e12
+          },
+          "cpu_demand":20,
+          "gpu_demand": 20,
+          "disk_demand": 10,
+          "min_bw_demand": 2,
+          "max_delay": 8,
+          "price_gamma": 1,
+          "area_ID": 3,
+          "active": true
+        },
+      "relationships": {
+            }
+      }
   ],
   "CpnNode":[
             {
             "attributes": {
                 "id": 1,
                 "available": true,
-                "model_name": "Test1",
+                "model_name": "CpnNode",
                 "cpu": 120,
                 "gpu":200,
-                "disk": 2e11,
+                "disk": 500,
                 "bandwidth": 1e10,
-                "cpu_flops":1e8,
-                "gpu_flops": 3e9,
+                "cpu_flops":1e10,
+                "gpu_flops": 3e10,
                 "pcie_speed": 2e9,
+                "cpu_demand": 0,
+                "gpu_demand":0,
+                "disk_demand": 0,
+                "bw_demand":0,
+                "area_ID": 1,
+                "coordinates": [
+                    1,
+                    1
+                ],
+                "max_concurrent_layer_downloads": 100,
+                "active": true
+            },
+            "relationships": {
+                "base_station": {},
+                "network_gw": {
+                    "class": "NetworkSwitch",
+                    "id": 1
+                },
+                "services": []
+            }
+        },
+    {
+            "attributes": {
+                "id": 2,
+                "available": true,
+                "model_name": "CpnNode",
+                "cpu": 150,
+                "gpu":200,
+                "disk": 500,
+                "bandwidth": 2e10,
+                "cpu_flops":2e10,
+                "gpu_flops":4e10,
+                "pcie_speed": 3e9,
                 "cpu_demand": 0,
                 "gpu_demand":0,
                 "disk_demand": 0,
                 "bw_demand":0,
                 "area_ID": 2,
                 "coordinates": [
-                    2,
+                    3,
                     1
                 ],
                 "max_concurrent_layer_downloads": 100,
-                "active": true,
-                "power_model_parameters": {}
+                "active": true
             },
             "relationships": {
-                "power_model": "None",
                 "base_station": {},
                 "network_gw": {
-                    "class": "CpnRouter",
+                    "class": "NetworkSwitch",
                     "id": 2
                 },
                 "services": []
             }
+        },
+       {
+            "attributes": {
+                "id": 3,
+                "available": true,
+                "model_name": "CpnNode",
+                "cpu": 150,
+                "gpu":200,
+                "disk": 500,
+                "bandwidth": 2e10,
+                "cpu_flops":2e10,
+                "gpu_flops":4e10,
+                "pcie_speed": 3e9,
+                "cpu_demand": 0,
+                "gpu_demand":0,
+                "disk_demand": 0,
+                "bw_demand":0,
+                "area_ID": 3,
+                "coordinates": [
+                    2,
+                    3
+                ],
+                "max_concurrent_layer_downloads": 100,
+                "active": true
+            },
+            "relationships": {
+                "base_station": {},
+                "network_gw": {
+                    "class": "CpnRouter",
+                    "id": 1
+                },
+                "services": []
+            }
         }
+  ],
+  "NetworkSwitch":[
+    {
+      "attributes": {
+        "id": 1,
+        "coordinates": [
+          1,
+          1
+        ],
+        "active": true},
+      "relationships": {
+        "links": [],
+        "edge_servers": [
+          {
+            "class":"CpnNode",
+            "id": 1
+          }
+        ]
+      }
+    },
+    {
+      "attributes": {
+        "id": 2,
+        "coordinates": [
+          3,
+          1
+        ],
+        "active": true
+      },
+      "relationships": {
+        "links": [],
+        "edge_servers": [
+          {
+            "class":"CpnNode",
+            "id": 2
+          }
+        ]
+      }
+    },
+    {
+      "attributes": {
+        "id": 3,
+        "coordinates": [
+          2,
+          2
+        ],
+        "active": true
+      },
+      "relationships": {
+        "links": []
+      }
+    }
+  ],
+      "NetworkLink":[
+        {
+            "attributes": {
+                "id": 1,
+                "delay": 5,
+                "bandwidth": 1e12,
+                "bandwidth_demand": 0,
+                "distance": 10,
+                "active": true
+            },
+            "relationships": {
+                "topology": {
+                    "class": "Topology",
+                    "id": 1
+                },
+                "active_flows": [],
+                "applications": [],
+                "nodes": [
+                    {
+                        "class": "CpnRouter",
+                        "id": 1
+                    },
+                    {
+                        "class": "NetworkSwitch",
+                        "id": 3
+                    }
+                ]
+            }
+          },
+        {
+          "attributes": {
+                "id": 2,
+                "delay": 5,
+                "bandwidth": 1e12,
+                "bandwidth_demand": 0,
+                "distance": 20,
+                "active": true
+            },
+            "relationships": {
+                "topology": {
+                    "class": "Topology",
+                    "id": 1
+                },
+                "active_flows": [],
+                "applications": [],
+                "nodes": [
+                    {
+                        "class": "NetworkSwitch",
+                        "id": 1
+                    },
+                    {
+                        "class": "NetworkSwitch",
+                        "id": 3
+                    }
+                ]
+            }
+        },
+        {
+          "attributes": {
+                "id": 3,
+                "delay": 5,
+                "bandwidth": 1e12,
+                "bandwidth_demand": 0,
+                "distance": 30,
+                "active": true
+            },
+            "relationships": {
+                "topology": {
+                    "class": "Topology",
+                    "id": 1
+                },
+                "active_flows": [],
+                "applications": [],
+                "nodes": [
+                    {
+                        "class": "NetworkSwitch",
+                        "id": 2
+                    },
+                    {
+                        "class": "NetworkSwitch",
+                        "id": 3
+                    }
+                ]
+            }
+        },
+        {
+          "attributes": {
+                "id": 4,
+                "delay": 5,
+                "bandwidth": 1e12,
+                "bandwidth_demand": 0,
+                "distance": 8,
+                "active": true
+            },
+            "relationships": {
+                "topology": {
+                    "class": "Topology",
+                    "id": 1
+                },
+                "active_flows": [],
+                "applications": [],
+                "nodes": [
+                    {
+                        "class": "NetworkSwitch",
+                        "id": 1
+                    },
+                    {
+                        "class": "CpnNode",
+                        "id": 1
+                    }
+                ]
+            }
+        },
+        {
+          "attributes": {
+                "id": 5,
+                "delay": 5,
+                "bandwidth": 1e12,
+                "bandwidth_demand": 0,
+                "distance": 6,
+                "active": true
+            },
+            "relationships": {
+                "topology": {
+                    "class": "Topology",
+                    "id": 1
+                },
+                "active_flows": [],
+                "applications": [],
+                "nodes": [
+                    {
+                        "class": "NetworkSwitch",
+                        "id": 2
+                    },
+                    {
+                        "class": "CpnNode",
+                        "id": 2
+                    }
+                ]
+            }
+        },
+        {
+          "attributes": {
+                "id": 6,
+                "delay": 5,
+                "bandwidth": 1e12,
+                "bandwidth_demand": 0,
+                "distance": 2,
+                "active": true
+            },
+            "relationships": {
+                "topology": {
+                    "class": "Topology",
+                    "id": 1
+                },
+                "active_flows": [],
+                "applications": [],
+                "nodes": [
+                    {
+                        "class": "CpnRouter",
+                        "id": 1
+                    },
+                    {
+                        "class": "CpnNode",
+                        "id": 3
+                    }
+                ]
+            }
+        }
+  ],
+  "Controller": [
+    {
+    "attributes": {
+      "id": 1,
+       "policy": "static"
+    },
+    "relationships":{
+          "cpn_nodes": [
+            {
+              "class": "CpnNode",
+              "id": 1
+            },
+            {
+              "class": "CpnNode",
+              "id": 2
+            }
+          ]
+            }
+
+  }
   ]
 }
