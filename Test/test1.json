@@ -75,7 +75,7 @@
                 "cpu": 120,
                 "gpu":200,
                 "disk": 500,
-                "bandwidth": 1e10,
+                "bandwidth": 10,
                 "cpu_flops":1e10,
                 "gpu_flops": 3e10,
                 "pcie_speed": 2e9,
@@ -108,7 +108,7 @@
                 "cpu": 150,
                 "gpu":200,
                 "disk": 500,
-                "bandwidth": 2e10,
+                "bandwidth": 20,
                 "cpu_flops":2e10,
                 "gpu_flops":4e10,
                 "pcie_speed": 3e9,
@@ -138,13 +138,13 @@
                 "id": 3,
                 "available": true,
                 "model_name": "CpnNode",
-                "cpu": 150,
-                "gpu":200,
-                "disk": 500,
-                "bandwidth": 2e10,
-                "cpu_flops":2e10,
-                "gpu_flops":4e10,
-                "pcie_speed": 3e9,
+                "cpu": 100,
+                "gpu":140,
+                "disk": 300,
+                "bandwidth": 10,
+                "cpu_flops":1e10,
+                "gpu_flops":2e10,
+                "pcie_speed": 2e9,
                 "cpu_demand": 0,
                 "gpu_demand":0,
                 "disk_demand": 0,
@@ -224,7 +224,7 @@
             "attributes": {
                 "id": 1,
                 "delay": 5,
-                "bandwidth": 1e12,
+                "bandwidth": 1000,
                 "bandwidth_demand": 0,
                 "distance": 10,
                 "active": true
@@ -252,7 +252,7 @@
           "attributes": {
                 "id": 2,
                 "delay": 5,
-                "bandwidth": 1e12,
+                "bandwidth": 1000,
                 "bandwidth_demand": 0,
                 "distance": 20,
                 "active": true
@@ -280,7 +280,7 @@
           "attributes": {
                 "id": 3,
                 "delay": 5,
-                "bandwidth": 1e12,
+                "bandwidth": 1000,
                 "bandwidth_demand": 0,
                 "distance": 30,
                 "active": true
@@ -308,7 +308,7 @@
           "attributes": {
                 "id": 4,
                 "delay": 5,
-                "bandwidth": 1e12,
+                "bandwidth": 1000,
                 "bandwidth_demand": 0,
                 "distance": 8,
                 "active": true
@@ -336,7 +336,7 @@
           "attributes": {
                 "id": 5,
                 "delay": 5,
-                "bandwidth": 1e12,
+                "bandwidth": 1000,
                 "bandwidth_demand": 0,
                 "distance": 6,
                 "active": true
@@ -364,7 +364,7 @@
           "attributes": {
                 "id": 6,
                 "delay": 5,
-                "bandwidth": 1e12,
+                "bandwidth": 1000,
                 "bandwidth_demand": 0,
                 "distance": 2,
                 "active": true
@@ -393,7 +393,7 @@
     {
     "attributes": {
       "id": 1,
-       "policy": "static"
+       "policy": "random"
     },
     "relationships":{
           "cpn_nodes": [
@@ -404,7 +404,11 @@
             {
               "class": "CpnNode",
               "id": 2
-            }
+            },
+            {
+              "class": "CpnNode",
+              "id": 3
+              }
           ]
             }
 

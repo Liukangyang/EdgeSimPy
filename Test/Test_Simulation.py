@@ -1,8 +1,9 @@
 import unittest
 from edge_sim_py.simulator import Simulator
+from edge_sim_py.mysimulator import MySimulator
 from edge_sim_py.components import *
-from edge_sim_py.activation_schedulers.MyScheduler import MyScheduler
-
+from edge_sim_py.activation_schedulers.my_scheduler import MyScheduler
+from edge_sim_py.tools import *
 
 class SimulationTestCase(unittest.TestCase):
     # Dispaly components
@@ -109,12 +110,100 @@ class SimulationTestCase(unittest.TestCase):
             # 控制器决策下发
             agent.step()
 
+    def testStatics(self):
+        print("testStatics")
+
+        # 仿真停止函数
+        def Stop_func() -> bool:
+            return True
+
+        simulator = Simulator(
+            stopping_criterion=Stop_func, scheduler=MyScheduler)
+        simulator.initialize(input_file="D:\\学习文档资料\\edgesimpy\\论文仿真\\Test\\test1.json")
+        print("Init status")
+        CpnNode.print_servers_metric()
+        #执行步进
+        # 上传任务请求
+        for agent in Task.all():
+            agent.step()
+        # CPN路由器上传到控制器队列中
+        for agent in CpnRouter.all():
+            agent.step()
+        # CPN控制器控制器执行部署决策，首先放入到算力节点的waiting_queue中
+        for agent in Controller.all():
+            agent.step()
+        # print(CpnNode.all())
+        # 算力节点步进
+        for agent in CpnNode.all():
+            agent.step()
+
+        #再次打印结果
+        print("Policy status")
+        CpnNode.print_servers_metric()
+
+    def testSimulatorStep(self):
+        print("testSimulatorStep")
+        def Stop_func(self) -> bool:
+            return False
+
+        #替代函数
+        Simulator.run_model = Simulator_Run_model
+        Simulator.step = Simulator_Step
+        Simulator.monitor = Simulator_result_monitor
+
+        simulator = Simulator(
+            stopping_criterion=Stop_func, scheduler=MyScheduler)
+        simulator.initialize(input_file="D:\\学习文档资料\\edgesimpy\\论文仿真\\Test\\test1.json")
+
+        simulator.run_model()
+
+    #测试自定义调度器
+    def testMySimulator(self):
+        print("testMySimulator")
+
+        def Stop_func(self) -> bool:
+           return all( task.status == 'end' for task in Task.all())
+
+
+        simulator =  MySimulator(
+            stopping_criterion=Stop_func, scheduler=MyScheduler
+        )
+        simulator.initialize(input_file="D:\\学习文档资料\\edgesimpy\\论文仿真\\Test\\test1.json")
+
+        simulator.run_model()
+
+    #测试用户任务的生成
+    def testUserTasks(self):
+        print("testUserTasks")
+        def Stop_func(self) -> bool:
+           return all( task.status == 'end' for task in Task.all())
+
+        simulator =  MySimulator(
+            stopping_criterion=Stop_func, scheduler=MyScheduler
+        )
+
+        simulator.initialize(input_file="D:\\学习文档资料\\edgesimpy\\论文仿真\\Test\\test1.json")
+        user = MyUser(lambda_rate=0.2,area_ID=3,model=simulator)
+
+        print(user._to_dict())
+        print(user.collect())
+
+        while True:
+            user.step()
+
+            # 跳过Task类，直接到CpnRouter类
+            for agent in CpnRouter.all():
+                agent.step()
+
+            # 控制器决策
+            for agent in Controller.all():
+                agent.step()
+
+            simulator.schedule.steps+=1
 
 
 
 
-        
-        
 
 
 if __name__ == '__main__':

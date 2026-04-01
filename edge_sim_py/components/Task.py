@@ -23,24 +23,34 @@ class Task( Service):
     def __init__(self,
         obj_id: int = None,
         label: str = "",
-        flops_demand: dict = {"cpu":.0,"gpu":.0},
-        cpu_demand: int = 0,
-        gpu_demand: int = 0,
-        disk_demand: int = 0,
-        min_bw_demand: int = 0,
-        max_delay: float = 0,
-        price_gamma:float = 0,
+        demand:dict = {
+            "cpu_flops": .0, "gpu_flops": .0,
+            "cpu":.0,"gpu":.0,"disk":.0,
+            "min_bw":.0,"max_delay":.0,
+            "price_gamma":.0,
+        },
+        sla:dict={
+            "min_bw":.0,
+            "max_delay":.0,
+            "price_gamma":.0
+        },
         state: int = 0,
+        status:str='init',
+        task_type:int=None,
+        sla_level:int = 1,
         area_ID:int = None,cpn_router:object=None)->object:
 
-       Service.__init__(self,obj_id=obj_id,label= label,cpu_demand=cpu_demand,state=state)
-       self.gpu_demand = gpu_demand
-       self.disk_demand = disk_demand
-       self.flops_demand = flops_demand
-       self.min_bw_demand = min_bw_demand
+       Service.__init__(self,obj_id=obj_id,label= label,cpu_demand=demand["cpu"],state=state)
+       self.flops_demand = {
+           "cpu":demand["cpu_flops"],
+           "gpu":demand["gpu_flops"]
+       }
+       self.gpu_demand = demand["gpu"]
+       self.disk_demand = demand["disk"]
+       self.min_bw_demand = sla["min_bw"]
        self.bw_demand = 0
-       self.max_delay = max_delay
-       self.price_gamma = price_gamma
+       self.max_delay = sla["max_delay"]
+       self.price_gamma = sla["price_gamma"]
        self.cpn_router = cpn_router
 
        self.trans_sustain_steps = 0 #传输时延
@@ -48,10 +58,11 @@ class Task( Service):
        self.resource_cost = .0 #资源花费成本
        self.efficiency = .0 # 任务效用
 
-       self.status = 'init'
+       self.status = status
 
-    #所属区域
-       self.area_ID = area_ID
+       self.task_type = task_type #任务类型
+       self.sla_level = sla_level #SLA等级
+       self.area_ID = area_ID  #所属区域
 
     def _to_dict(self) -> dict:
         """Method that overrides the way the object is formatted to JSON."
@@ -65,10 +76,17 @@ class Task( Service):
                 "label": self.label,
                 "status": self.status,
                 "_available": self._available,
+                "areaID":self.area_ID,
+
+                "task_type": self.task_type,
+
                 "flops_demand": self.flops_demand,
                 "cpu_demand": self.cpu_demand,
                 "gpu_demand":self.gpu_demand,
                 "disk_demand": self.disk_demand,
+
+                "sla_level": self.sla_level,
+
                 "min_bw_demand": self.min_bw_demand,
                 "max_delay": self.max_delay,
                 "price_gamma": self.price_gamma,
@@ -94,12 +112,18 @@ class Task( Service):
             "Available": self._available,
             "Server": self.server.id if self.server else None, #CPN-node
             "Being Provisioned": self.being_provisioned,
-            "Last Migration": last_migration,
+            "areaID":self.area_ID,
+
+            "task_type": self.task_type,
+
             "flops_demand": self.flops_demand,
             "cpu_demand": self.cpu_demand,
             "gpu_demand": self.gpu_demand,
             "disk_demand": self.disk_demand,
-            "bw_demand": self.bw_demand,
+
+            "sla_level": self.sla_level,
+
+            "min_bw_demand": self.min_bw_demand,
             "max_delay": self.max_delay,
             "price_gamma": self.price_gamma,
         }
@@ -122,7 +146,7 @@ class Task( Service):
         if self.status == 'finished':
             self.status = 'end'
             info = self._to_dict()
-            print("task"+info['id'] +"has been finished!")
+            print("task "+str(info["attributes"]['id']) +" has been finished!")
             print(info)
             self.being_provisioned = False
             self._available = False

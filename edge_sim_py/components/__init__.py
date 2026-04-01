@@ -18,6 +18,7 @@ from .cpn_router import CpnRouter
 from .cpn_node import CpnNode
 from .Task import Task
 from .Controller import Controller
+from .myuser import MyUser
 
 # Network flow scheduling algorithms
 from .flow_scheduling import *

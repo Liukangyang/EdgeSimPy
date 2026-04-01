@@ -149,18 +149,17 @@ class CpnNode(EdgeServer):
             "Disk Demand": self.disk_demand,
             "Bandwidth Demand": self.bw_demand,
 
-
             "resource_ratio":{
-                "cpu":self.cpu_demand/self.cpu,
-                "gpu":self.gpu_demand/self.gpu,
-                "disk":self.disk_demand/self.disk,
-                "bw":self.bw_demand/self.bandwidth
+                "cpu":round(self.cpu_demand/self.cpu,2),
+                "gpu":round(self.gpu_demand/self.gpu,2),
+                "disk":round(self.disk_demand/self.disk,2),
+                "bw":round(self.bw_demand/self.bandwidth,2)
             },
 
             "Services": [service.id for service in self.services],
-            "Download Queue": [f.metadata["object"].instruction for f in self.download_queue],
-            "Waiting Queue": [layer.instruction for layer in self.waiting_queue],
-            "Computing Quque":[service for service in self.compute_queue],
+            "Download Queue": len(self.download_queue),
+            "Waiting Queue": len(self.waiting_queue),
+            "Computing Queue":len(self.compute_queue),
             "Power Consumption": self.get_power_consumption(),
         }
         return metrics
@@ -176,6 +175,7 @@ class CpnNode(EdgeServer):
                     heapq.heappush(self.compute_queue,(self.model.schedule.steps+service.comp_sustain_steps,service))
             else:#重新插入下载队列中
                 heapq.heappush(self.download_queue,(trans_sustain_steps,flow))
+                break
 
         #2.从compute_queue中提取出已完成计算的任务，并释放相应资源
         while(len(self.compute_queue)>0):
@@ -191,6 +191,7 @@ class CpnNode(EdgeServer):
                  service.step()
              else:#重新插入计算队列中
                  heapq.heappush(self.compute_queue,(comp_sustain_steps,service))
+                 break
 
 
     def step(self):
@@ -211,7 +212,7 @@ class CpnNode(EdgeServer):
                 target=self,  # target node->this cpn node
                 start=self.model.schedule.steps + 1,
                 path=unload_service.path,  # 传输路径由服务对象提供，由provision在调度时实现路径计算
-                bandwidth_demand=unload_service.bw_demand,
+                bw_demand=unload_service.bw_demand,
                 data_to_transfer=unload_service.disk_demand,
                 metadata={"type": "service", "object": unload_service},
                 sustain_steps=self.model.schedule.steps + unload_service.trans_sustain_steps  # 模拟持续步长
@@ -250,6 +251,46 @@ class CpnNode(EdgeServer):
 
     def _get_task(self):
         return self.services
+
+    #指标打印
+    @classmethod
+    def print_servers_metric(cls,obj_id:int=0):
+            lines = []
+            lines.append( "| ID | CPU | GPU | Disk | BW |                     ratio                        | d_t | c_t | tasks |")
+            lines.append("|----|-----|-----|------|----|--------------------------------------------------|----|----|----|")
+            if obj_id == 0:
+                for server in cls._instances:
+                    metrics = server.collect()
+                    data_row = (
+                        f"|  {metrics['Instance ID']} | "
+                        f"{metrics['CPU']} | "
+                        f"{metrics['GPU']} | "
+                        f"{metrics['Disk']}  | "
+                        f"{metrics['Bandwidth']} | "
+                        f"{metrics["resource_ratio"]} | "
+                        f"{metrics['Download Queue']} | "
+                        f"{metrics['Computing Queue']} | "
+                        f"{(metrics['Download Queue']+metrics['Computing Queue'])} |"
+                    )
+                    lines.append(data_row)
+            else:
+                server = cls.find_by_id(cls,obj_id)
+                metrics = server.collect()
+                data_row = (
+                    f"| {metrics['Instance ID']} | "
+                    f"{metrics['CPU']} | "
+                    f"{metrics['GPU']} | "
+                    f"{metrics['Disk']} | "
+                    f"{metrics['Bandwidth']} | "
+                    f"{metrics["resource_ratio"]} | "
+                    f"{metrics['Download Queue']} | "
+                    f"{metrics['Computing Quque']} |"
+                )
+                lines.append(data_row)
+
+            for line in lines:
+                print(line)
+
 
 
 

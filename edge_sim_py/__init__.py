@@ -4,7 +4,7 @@ __version__ = "1.1.0"
 
 # Main simulation component
 from .simulator import Simulator
-
+from .mysimulator import MySimulator
 # Misc components
 from .component_manager import ComponentManager
 
