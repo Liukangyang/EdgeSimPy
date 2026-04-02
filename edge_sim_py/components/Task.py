@@ -38,7 +38,7 @@ class Task( Service):
         status:str='init',
         task_type:int=None,
         sla_level:int = 1,
-        area_ID:int = None,cpn_router:object=None)->object:
+        area_ID:int = None,cpn_router:object=None,model:object=None)->object:
 
        Service.__init__(self,obj_id=obj_id,label= label,cpu_demand=demand["cpu"],state=state)
        self.flops_demand = {
@@ -63,6 +63,9 @@ class Task( Service):
        self.task_type = task_type #任务类型
        self.sla_level = sla_level #SLA等级
        self.area_ID = area_ID  #所属区域
+
+       self.model = model
+
 
     def _to_dict(self) -> dict:
         """Method that overrides the way the object is formatted to JSON."
@@ -91,6 +94,7 @@ class Task( Service):
                 "max_delay": self.max_delay,
                 "price_gamma": self.price_gamma,
 
+                "time": self.trans_sustain_steps + self.comp_sustain_steps,
                 "resource_cost": self.resource_cost,
                 "efficiency":self.efficiency,
             },
@@ -130,14 +134,14 @@ class Task( Service):
             "max_delay": self.max_delay,
             "price_gamma": self.price_gamma,
 
-            "resource_cost":self.resource_cost,
+            "time":round(self.trans_sustain_steps+self.comp_sustain_steps,2),
+            "resource_cost":round(self.resource_cost,2),
             "efficiency": self.efficiency,
         }
         return metrics
 
     #计算任务的资源成本
     def get_ResourceCost(self):
-
         return self.resource_cost
 
     def step(self):
@@ -183,8 +187,8 @@ class Task( Service):
                                                                   weight="delay",method="dijkstra",service=self)
         #4. compute delay
         pcie_time = self.disk_demand / target_server.pcie_speed
-        cpu_time = self.flops_demand['cpu'] / (self.cpu_demand * target_server.cpu_flops)
-        gpu_time = self.flops_demand['gpu'] / (self.gpu_demand * target_server.gpu_flops)
+        cpu_time = self.flops_demand['cpu']*1e9 / (self.cpu_demand * target_server.cpu_flops)
+        gpu_time = self.flops_demand['gpu']*1e9 / (self.gpu_demand * target_server.gpu_flops)
         # TODO:self.comp_sustain_steps =  pcie_time + max(cpu_time,gpu_time)-先忽略IO时延
         self.comp_sustain_steps = max(cpu_time, gpu_time)
         #TODO:self.trans_sustain_steps = self.disk_demand / self.bw_demand + (len(self.path)-2) * (self.__class__.Mtu/self.bw_demand + Thop) + link_delay
@@ -195,28 +199,28 @@ class Task( Service):
 
         total_time = self.trans_sustain_steps + self.comp_sustain_steps
 
-        #TODO:资源定价计算和效用计算
-        #带宽总成本
-        bw_price = self.bw_demand / 0.5 * self.model.params["cost"]["Pb"]
+        #TODO:修改带宽成本的计价
+        #带宽总成本(1s为单位)
+        bw_price = self.model.params["cost"]["Pb"][str(self.bw_demand)] / 3600 * self.trans_sustain_steps
 
         #cpu成本
         cpu_base = self.model.params["cost"]["cpu"]["base_price"]
         Ccpu = self.model.params["cost"]["cpu"]["C"]
         cpu_fbase = self.model.params["cost"]["cpu"]["fbase"]
-        cpu_price = cpu_base + Ccpu*self.cpu_demand*((target_server.cpu_flops-cpu_fbase)/cpu_fbase)
+        cpu_price = cpu_base + Ccpu*self.cpu_demand*((target_server.cpu_flops/1e9-cpu_fbase)/cpu_fbase)
 
         #gpu成本
         gpu_base = self.model.params["cost"]["gpu"]["base_price"]
         Cgpu = self.model.params["cost"]["gpu"]["C"]
         gpu_fbase = self.model.params["cost"]["gpu"]["fbase"]
-        gpu_price = gpu_base + Cgpu*self.gpu_demand*((target_server.gpu_flops-gpu_fbase)/gpu_fbase)
+        gpu_price = gpu_base + Cgpu*self.gpu_demand*((target_server.gpu_flops/1e9-gpu_fbase)/gpu_fbase)
 
         #区域成本
         Gbase = min(self.model.params["cost"]["economy_vitality"])
         Garea = self.model.params["cost"]["economy_vitality"][self.area_ID-1]
-        Vloc = (Garea - Gbase) / Gbase
+        Vloc = Garea / Gbase
         #计算资源成本 (单位时间计算成本*计算时间)
-        compute_price =   ((cpu_price + gpu_price)*(1+Vloc)) * self.comp_sustain_steps
+        compute_price =   ((cpu_price + gpu_price) * Vloc) * self.comp_sustain_steps
         #TODO:待补充-网络跨域传输成本
         #总资源成本
         self.resource_cost = bw_price + compute_price
@@ -224,5 +228,45 @@ class Task( Service):
         self.efficiency = math.exp(-( total_time + self.price_gamma * self.resource_cost ))
 
         self.being_provisioned = True
+
+
+    #统计打印函数
+    @classmethod
+    def print_Tasks_metric(cls,obj_id:int=0):
+        lines = []
+        lines.append(
+            "| ID | Area | Server | task_type | sla_level |  time | cost |     efficiency     |")
+        lines.append("|----|------|--------|-----------|-----------|-------|------|--------------------|")
+        if obj_id == 0:
+            for task in cls._instances:
+                metrics = task.collect()
+                data_row = (
+                    f"|  {metrics['Instance ID']} |  "
+                    f"{metrics['areaID']}   |   "
+                     f"{metrics['Server']}    |     "
+                    f"{metrics['task_type']}     |     "
+                    f"{metrics['sla_level']}     | "
+                    f"{metrics["time"]} | "
+                    f"{metrics['resource_cost']} |   "
+                    f"{metrics['efficiency']} |"
+                )
+                lines.append(data_row)
+        else:
+            task = cls.find_by_id(cls, obj_id)
+            metrics = task.collect()
+            data_row = (
+                f"| {metrics['Instance ID']} | "
+                f"{metrics['areaID']} | "
+                f"{metrics['Server']} | "
+                f"{metrics['task_type']}  | "
+                f"{metrics['sla_level']} | "
+                f"{metrics["time"]} | "
+                f"{metrics['resource_cost']} | "
+                f"{metrics['efficiency']} | "
+            )
+            lines.append(data_row)
+
+        for line in lines:
+            print(line)
 
 

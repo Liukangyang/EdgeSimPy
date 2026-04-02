@@ -18,7 +18,7 @@ import numpy as np
 
 #不同SLA等级下的最小带宽，最大时延和资源成本敏感系数
 sla_list={
-    "min_bw":[[1,5],[1,5],[1,5]],
+    "min_bw":[1,2,5,10],
     "max_delay":[[25,40],[12,25],[8,12]],
     "price_gamma":[[0.8,1],[0.4,0.8],[0.2,0.4]]
 }
@@ -26,9 +26,9 @@ sla_list={
 #不同任务类型的资源需求取值范围
 task_list={
     "cpu_flops":[[1,5],[5,10],[10,40]],
-    "gpu_flops":[[10,50],[50,200],[200,1000]],
+    "gpu_flops":[[5,20],[20,50],[50,100]],
     "cpu":[[1,2],[1,4],[4,8]],
-    "gpu":[[1000,4000],[4000,10000],[10000,15000]],
+    "gpu":[[2,4],[4,6],[6,8]],
     "disk":[[5,10],[10,40],[40,80]]
 }
 
@@ -91,23 +91,33 @@ class MyUser(User):
 
 
     def step(self):
-        #1.初始先生成随机时间间隔
-        if self.last_task_step == 0 and self.time_intervals <= 0:
-            self.time_intervals = np.random.exponential(scale=1/self.lambda_rate)
-
-        #2.判断是否已经到达生成新任务的时间步
-        if self.model.schedule.steps - self.last_task_step >= round(self.time_intervals):
+        # 初始就生成任务
+        if self.lambda_rate == 0 and self.task==None:
             # 生成新任务
             self.task = self.generate_newTask()
             self.task_count += 1
             # 更新last_task_step并生成新的时间间隔
             self.last_task_step = self.model.schedule.steps
-            self.time_intervals = np.random.exponential(scale=1/self.lambda_rate)
-
             # 将任务上传到区域内的CPN路由器缓存队列上
             self.task.step()
+        #按照指定时间生成任务
+        else:
+            #1.初始先生成随机时间间隔
+            if self.last_task_step == 0 and self.time_intervals <= 0:
+                self.time_intervals = np.random.exponential(scale=1/self.lambda_rate)
 
-            print(self.task.collect())
+            #2.判断是否已经到达生成新任务的时间步
+            if self.model.schedule.steps - self.last_task_step >= round(self.time_intervals):
+                # 生成新任务
+                self.task = self.generate_newTask()
+                self.task_count += 1
+                # 更新last_task_step并生成新的时间间隔
+                self.last_task_step = self.model.schedule.steps
+                self.time_intervals = np.random.exponential(scale=1/self.lambda_rate)
+
+                # 将任务上传到区域内的CPN路由器缓存队列上
+                self.task.step()
+
 
 
     def generate_newTask(self):
@@ -122,14 +132,15 @@ class MyUser(User):
                                    +task_list["cpu_flops"][task_type-1][0]),
             "gpu_flops":round(np.random.rand()*(task_list["gpu_flops"][task_type-1][1]-task_list["gpu_flops"][task_type-1][0])
                                    +task_list["gpu_flops"][task_type-1][0]),
-             "cpu":np.random.randint(low = task_list["cpu"][task_type-1][0],high = task_list["cpu"][task_type-1][1]),
-            "gpu":np.random.randint(low = task_list["gpu"][task_type-1][0],high = task_list["gpu"][task_type-1][1]),
+             "cpu":np.random.randint(low = task_list["cpu"][task_type-1][0],high = task_list["cpu"][task_type-1][1]+1),
+            "gpu":np.random.randint(low = task_list["gpu"][task_type-1][0],high = task_list["gpu"][task_type-1][1]+1),
             "disk":np.random.randint(low=task_list["disk"][task_type-1][0],high=task_list["disk"][task_type-1][1]+1),
         }
 
         sla ={
-            "min_bw": round(np.random.rand()*(sla_list["min_bw"][sla_level-1][1]-sla_list["min_bw"][sla_level-1][0])
-                                   +sla_list["min_bw"][sla_level-1][0],1),
+            # "min_bw": round(np.random.rand()*(sla_list["min_bw"][sla_level-1][1]-sla_list["min_bw"][sla_level-1][0])
+            #                        +sla_list["min_bw"][sla_level-1][0],1),
+            "min_bw":np.random.choice(sla_list["min_bw"]),
 
             "max_delay": round(np.random.rand()*(sla_list["max_delay"][sla_level-1][1]-sla_list["max_delay"][sla_level-1][0])
                                    +sla_list["max_delay"][sla_level-1][0],1),
@@ -139,7 +150,7 @@ class MyUser(User):
         }
 
 
-        task = Task(area_ID=self.area_ID,status='init',demand=demand,sla=sla,task_type=task_type,sla_level=sla_level)
+        task = Task(area_ID=self.area_ID,status='init',demand=demand,sla=sla,task_type=task_type,sla_level=sla_level,model=self.model)
         self.task_type = task_type
         self.sla_level = sla_level
 

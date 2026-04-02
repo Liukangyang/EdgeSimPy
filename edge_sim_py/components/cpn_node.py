@@ -253,10 +253,10 @@ class CpnNode(EdgeServer):
 
     #指标打印
     @classmethod
-    def print_servers_metric(cls,obj_id:int=0):
+    def print_Servers_metric(cls,obj_id:int=0):
             lines = []
             lines.append( "| ID | CPU | GPU | Disk | BW |                     ratio                        | d_t | c_t | tasks |")
-            lines.append("|----|-----|-----|------|----|--------------------------------------------------|----|----|----|")
+            lines.append("|----|-----|-----|------|----|--------------------------------------------------|-----|-----|-------|")
             if obj_id == 0:
                 for server in cls._instances:
                     metrics = server.collect()

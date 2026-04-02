@@ -22,6 +22,16 @@ import json
 
 SUPPORTED_TIME_UNITS = ["seconds", "microseconds", "milliseconds", "minutes"]
 
+def get_Jain(x:list=[]):
+    if len(x)==0 or len(x)==1:
+        return 1
+    else:
+        n = len(x)
+        sum_x = sum(x)
+        sum_x_squared = sum(map(lambda x: x ** 2, x))
+        jain_index = (sum_x ** 2) / (n * sum_x_squared)
+        return jain_index
+
 class MySimulator(Simulator):
     def __init__(self,
         stopping_criterion: Callable = None,  # 停止标准
@@ -36,8 +46,6 @@ class MySimulator(Simulator):
                            tick_duration=tick_duration,tick_unit=tick_unit,
                            obj_id=obj_id, scheduler=scheduler,dump_interval=dump_interval)
 
-        #预计最大任务数量
-        self.max_tasks = max_tasks
         #用户列表
         self.users=[]
 
@@ -66,9 +74,11 @@ class MySimulator(Simulator):
                     "lambda_rate":0.5,
                     "area_nums":1,
                     "user_nums":1,
-                }
+                },
+                "max_tasks":1,
             }
-
+        #预计最大任务数量
+        self.max_tasks = self.params["max_tasks"]
         #仿真停止标准
         if self.stopping_criterion == None:
             self.stopping_criterion = lambda:  ( all(task.status=='end' for task in Task.all())
@@ -85,9 +95,11 @@ class MySimulator(Simulator):
             self.step()
 
             # Calls the method that collects monitoring data about the agents
-            if self.schedule.steps % 5 == 0:
-                self.monitor()
+            # if self.schedule.steps % 5 == 0:
+            #     self.monitor()
             # Checks if the simulation should end according to the stop condition
+            if self.stopping_criterion():
+                self.monitor()
             self.running = False if self.stopping_criterion(self) else True
 
 
@@ -109,10 +121,14 @@ class MySimulator(Simulator):
 
         # --- Servers 部分 ---
         print("Cpn-Nodes:")
-        CpnNode.print_servers_metric()
+        CpnNode.print_Servers_metric()
 
         # --- 累积任务数 ---
         MyScheduler.statistics()
+
+        # --- Task部分 ---
+        print("Tasks:")
+        Task.print_Tasks_metric()
 
     #初始随机生成用户
     def initialize_Users(self):
@@ -134,4 +150,33 @@ class MySimulator(Simulator):
         with open(input_file,'r',encoding='utf-8') as file:
             params = json.load(file)
         return params
+
+    def get_R(self):
+        total_R=.0
+        for task in Task.all():
+            total_R += task.efficiency
+        return total_R
+
+    def get_D(self):
+        #cpu负载程度
+        cpu_ratio=[]
+        gpu_ratio=[]
+        bw_ratio=[]
+        disk_ratio=[]
+        for node in CpnNode.all():
+            cpu_ratio.append(node.cpu_demand / node.cpu)
+            gpu_ratio.append(node.gpu_demand / node.gpu)
+            bw_ratio.append(node.bw_demand / node.bandwidth)
+            disk_ratio.append(node.disk_demand / node.disk)
+
+        cpu_Jain = get_Jain(cpu_ratio)
+        gpu_Jain = get_Jain(gpu_ratio)
+        bw_Jain = get_Jain(bw_ratio)
+        disk_Jain = get_Jain(disk_ratio)
+
+        #TODO:综合负载均衡度
+        J_total = 0.25*cpu_Jain + 0.25*gpu_Jain + 0.25*bw_Jain + 0.25*disk_Jain
+        D = np.exp(-(1-J_total))
+        return D
+
 

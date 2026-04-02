@@ -220,7 +220,49 @@ class SimulationTestCase(unittest.TestCase):
         for user in MyUser.all():
             print(user.collect())
 
+    def testSimulation(self):
+        print("testSimulation")
 
+        #设置随机数种子
+        np.random.seed(40)
+        def Stop_func(self) -> bool:
+           return all( task.status == 'end' for task in Task.all())
+
+        params = MySimulator.get_ParamsFromFile(input_file='Test/params.json')
+        simulator =  MySimulator(
+            stopping_criterion=Stop_func,
+            scheduler=MyScheduler,
+            params=params
+        )
+        simulator.setUp(input_file='Test/test1.json')
+
+
+        #由用户生成任务并上传到CPNRouter中
+        for user in MyUser.all():
+            user.step()
+
+        # CPN路由器上传到控制器队列中
+        for router in CpnRouter.all():
+            router.step()
+        # 控制器进行决策
+        for controller in Controller.all():
+            controller.step()
+
+
+        # 算力节点执行任务
+        for node in CpnNode.all():
+            node.step()
+
+        #打印仿真统计
+        simulator.monitor()
+
+        #打印调度后的总结果
+        total_R = simulator.get_R()
+        D = simulator.get_D()
+        result = 0.5*total_R + 0.5*D
+        print("R:",total_R)
+        print("D:",D)
+        print("Result:",result)
 
 
 

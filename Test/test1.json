@@ -1,6 +1,5 @@
 {
   "CpnRouter":[
-
     {
       "attributes": {
         "id": 1,
@@ -24,47 +23,56 @@
           }
         ]
       }
-    }
-  ],
-  "Task": [
-  {
-        "attributes": {
-          "id": 1,
-          "flops_demand": {
-            "cpu": 1e12,
-            "gpu": 2e11
-          },
-          "cpu_demand":10,
-          "gpu_demand": 20,
-          "disk_demand": 20,
-          "min_bw_demand": 2,
-          "max_delay": 10,
-          "price_gamma": 2,
-          "area_ID": 3,
-          "active": true
-        },
-      "relationships": {
-            }
-      },
+    },
     {
-        "attributes": {
-          "id": 2,
-          "flops_demand": {
-            "cpu": 5e11,
-            "gpu": 1e12
-          },
-          "cpu_demand":20,
-          "gpu_demand": 20,
-          "disk_demand": 10,
-          "min_bw_demand": 2,
-          "max_delay": 8,
-          "price_gamma": 1,
-          "area_ID": 3,
-          "active": true
-        },
+      "attributes": {
+        "id": 2,
+        "coordinates": [
+          1,
+          1
+        ],
+        "area_ID": 1,
+        "active": true
+      },
       "relationships": {
-            }
+        "links": [],
+        "controller": {
+          "class": "Controller",
+          "id": 1
+        },
+        "edge_servers": [
+          {
+            "class": "CpnNode",
+            "id": 1
+          }
+        ]
       }
+    },
+
+    {
+      "attributes": {
+        "id": 3,
+        "coordinates": [
+          3,
+          1
+        ],
+        "area_ID": 2,
+        "active": true
+      },
+      "relationships": {
+        "links": [],
+        "controller": {
+          "class": "Controller",
+          "id": 1
+        },
+        "edge_servers": [
+          {
+            "class": "CpnNode",
+            "id": 2
+          }
+        ]
+      }
+    }
   ],
   "CpnNode":[
             {
@@ -72,11 +80,11 @@
                 "id": 1,
                 "available": true,
                 "model_name": "CpnNode",
-                "cpu": 120,
-                "gpu":200,
+                "cpu": 100,
+                "gpu":120,
                 "disk": 500,
-                "bandwidth": 10,
-                "cpu_flops":1e10,
+                "bandwidth": 80,
+                "cpu_flops":1e9,
                 "gpu_flops": 3e10,
                 "pcie_speed": 2e9,
                 "cpu_demand": 0,
@@ -94,8 +102,8 @@
             "relationships": {
                 "base_station": {},
                 "network_gw": {
-                    "class": "NetworkSwitch",
-                    "id": 1
+                    "class": "CpnRouter",
+                    "id": 2
                 },
                 "services": []
             }
@@ -105,11 +113,11 @@
                 "id": 2,
                 "available": true,
                 "model_name": "CpnNode",
-                "cpu": 150,
-                "gpu":200,
+                "cpu": 80,
+                "gpu":100,
                 "disk": 500,
-                "bandwidth": 20,
-                "cpu_flops":2e10,
+                "bandwidth": 50,
+                "cpu_flops":2e9,
                 "gpu_flops":4e10,
                 "pcie_speed": 3e9,
                 "cpu_demand": 0,
@@ -127,8 +135,8 @@
             "relationships": {
                 "base_station": {},
                 "network_gw": {
-                    "class": "NetworkSwitch",
-                    "id": 2
+                    "class": "CpnRouter",
+                    "id": 3
                 },
                 "services": []
             }
@@ -138,11 +146,11 @@
                 "id": 3,
                 "available": true,
                 "model_name": "CpnNode",
-                "cpu": 100,
-                "gpu":140,
-                "disk": 300,
-                "bandwidth": 10,
-                "cpu_flops":1e10,
+                "cpu": 70,
+                "gpu":160,
+                "disk": 400,
+                "bandwidth": 60,
+                "cpu_flops":1e9,
                 "gpu_flops":2e10,
                 "pcie_speed": 2e9,
                 "cpu_demand": 0,
@@ -170,43 +178,6 @@
   "NetworkSwitch":[
     {
       "attributes": {
-        "id": 1,
-        "coordinates": [
-          1,
-          1
-        ],
-        "active": true},
-      "relationships": {
-        "links": [],
-        "edge_servers": [
-          {
-            "class":"CpnNode",
-            "id": 1
-          }
-        ]
-      }
-    },
-    {
-      "attributes": {
-        "id": 2,
-        "coordinates": [
-          3,
-          1
-        ],
-        "active": true
-      },
-      "relationships": {
-        "links": [],
-        "edge_servers": [
-          {
-            "class":"CpnNode",
-            "id": 2
-          }
-        ]
-      }
-    },
-    {
-      "attributes": {
         "id": 3,
         "coordinates": [
           2,
@@ -219,7 +190,7 @@
       }
     }
   ],
-      "NetworkLink":[
+  "NetworkLink":[
         {
             "attributes": {
                 "id": 1,
@@ -266,8 +237,8 @@
                 "applications": [],
                 "nodes": [
                     {
-                        "class": "NetworkSwitch",
-                        "id": 1
+                        "class": "CpnRouter",
+                        "id": 2
                     },
                     {
                         "class": "NetworkSwitch",
@@ -294,8 +265,8 @@
                 "applications": [],
                 "nodes": [
                     {
-                        "class": "NetworkSwitch",
-                        "id": 2
+                        "class": "CpnRouter",
+                        "id": 3
                     },
                     {
                         "class": "NetworkSwitch",
@@ -322,8 +293,8 @@
                 "applications": [],
                 "nodes": [
                     {
-                        "class": "NetworkSwitch",
-                        "id": 1
+                        "class": "CpnRouter",
+                        "id": 2
                     },
                     {
                         "class": "CpnNode",
@@ -350,8 +321,8 @@
                 "applications": [],
                 "nodes": [
                     {
-                        "class": "NetworkSwitch",
-                        "id": 2
+                        "class": "CpnRouter",
+                        "id": 3
                     },
                     {
                         "class": "CpnNode",
