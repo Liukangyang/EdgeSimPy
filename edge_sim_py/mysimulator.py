@@ -17,6 +17,9 @@ from datetime import timedelta
 from urllib.parse import urlparse
 from urllib.request import urlopen
 
+import numpy as np
+import json
+
 SUPPORTED_TIME_UNITS = ["seconds", "microseconds", "milliseconds", "minutes"]
 
 class MySimulator(Simulator):
@@ -27,18 +30,49 @@ class MySimulator(Simulator):
         obj_id: int = None,
         scheduler: Callable = DefaultScheduler,  #调度器
         dump_interval: int = 100,
-        max_tasks:int=0):
+        max_tasks:int=0,
+        params: dict = None,):
         Simulator.__init__(self,stopping_criterion=stopping_criterion,
                            tick_duration=tick_duration,tick_unit=tick_unit,
                            obj_id=obj_id, scheduler=scheduler,dump_interval=dump_interval)
 
         #预计最大任务数量
         self.max_tasks = max_tasks
+        #用户列表
+        self.users=[]
+
+        # 仿真参数
+        if params:
+            self.params = params
+        else:
+            self.params = {
+                #资源成本
+                "cost":{
+                    "Pb": .0,  # 单位带宽增量成本
+                    "cpu":{
+                        "base_price":.0,
+                        "fbase": 0,
+                        "C": .0,
+                    },
+                    "gpu":{
+                        "base_price": .0,
+                        "fbase": 0,
+                        "C": .0,
+                    },
+                    "economy_vitality": [26751.86,11492.63,7305.89,6878.61],#
+                },
+                #用户参数
+                "user":{
+                    "lambda_rate":0.5,
+                    "area_nums":1,
+                    "user_nums":1,
+                }
+            }
+
+        #仿真停止标准
         if self.stopping_criterion == None:
             self.stopping_criterion = lambda:  ( all(task.status=='end' for task in Task.all())
                                                     and self.schedule.total_count >= self.max_tasks)
-
-
 
 
     def run_model(self):
@@ -79,3 +113,25 @@ class MySimulator(Simulator):
 
         # --- 累积任务数 ---
         MyScheduler.statistics()
+
+    #初始随机生成用户
+    def initialize_Users(self):
+        for i in range(self.params["user"]["user_nums"]):
+            area_ID = np.random.randint(low=1,high=self.params["user"]["area_nums"]+1)
+            user = MyUser(lambda_rate=self.params["user"]["lambda_rate"],area_ID=area_ID,model=self)
+            self.users.append(user)
+
+
+    #重定义初始化
+    def setUp(self,input_file: str)->None:
+        self.initialize(input_file=input_file)
+        self.initialize_Users()
+
+    #从json文件中读取仿真参数设置
+    @classmethod
+    def get_ParamsFromFile(cls,input_file:str)->dict:
+
+        with open(input_file,'r',encoding='utf-8') as file:
+            params = json.load(file)
+        return params
+

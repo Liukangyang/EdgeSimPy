@@ -11,7 +11,6 @@ from edge_sim_py.components.Controller import Controller
 class MyScheduler(MesaBaseScheduler):
     """Class responsible for scheduling the events that take place at each step of the simulation model."""
 
-    # TODO:统计数据
     @classmethod
     def statistics(cls):
         # 统计量

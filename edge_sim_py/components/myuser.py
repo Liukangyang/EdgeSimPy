@@ -18,7 +18,7 @@ import numpy as np
 
 #不同SLA等级下的最小带宽，最大时延和资源成本敏感系数
 sla_list={
-    "min_bw":[[2,4],[4.0,6.0],[6.0,10.0]],
+    "min_bw":[[1,5],[1,5],[1,5]],
     "max_delay":[[25,40],[12,25],[8,12]],
     "price_gamma":[[0.8,1],[0.4,0.8],[0.2,0.4]]
 }
@@ -83,7 +83,7 @@ class MyUser(User):
             "lambda_rate": self.lambda_rate,
             "area_ID": self.area_ID,
             "task_count" : self.task_count,
-            "current_service": self.task.collect() if self.task else 'None',
+            "current_service": self.task,
             "task_type":self.task_type,
             "sla_level":self.sla_level
         }
@@ -91,7 +91,6 @@ class MyUser(User):
 
 
     def step(self):
-        #TODO:根据间隔时间生成任务
         #1.初始先生成随机时间间隔
         if self.last_task_step == 0 and self.time_intervals <= 0:
             self.time_intervals = np.random.exponential(scale=1/self.lambda_rate)

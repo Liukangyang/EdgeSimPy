@@ -1,0 +1,22 @@
+{
+                "cost":{
+                    "Pb": 0,
+                    "cpu":{
+                        "base_price":0.027,
+                        "fbase": 1,
+                        "C": 0.018
+                    },
+                    "gpu":{
+                        "base_price": 0.030,
+                        "fbase": 2,
+                        "C": 0.020
+                    },
+                    "economy_vitality": [26751.86,11492.63,7305.89,6878.61]
+                },
+
+                "user":{
+                    "lambda_rate":0.5,
+                    "area_nums":3,
+                    "user_nums":2
+                }
+}

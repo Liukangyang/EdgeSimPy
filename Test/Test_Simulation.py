@@ -202,6 +202,25 @@ class SimulationTestCase(unittest.TestCase):
             simulator.schedule.steps+=1
 
 
+    def testInitializeUsers(self):
+        print("testInitializeUsers")
+        def Stop_func(self) -> bool:
+           return all( task.status == 'end' for task in Task.all())
+
+        params = MySimulator.get_ParamsFromFile(input_file='Test/params.json')
+        print(params)
+        simulator =  MySimulator(
+            stopping_criterion=Stop_func, scheduler=MyScheduler,
+            params=params,max_tasks=1
+        )
+
+        simulator.setUp(input_file='Test/test1.json')
+
+        #打印User
+        for user in MyUser.all():
+            print(user.collect())
+
+
 
 
 

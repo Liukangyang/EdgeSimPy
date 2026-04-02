@@ -90,6 +90,9 @@ class Task( Service):
                 "min_bw_demand": self.min_bw_demand,
                 "max_delay": self.max_delay,
                 "price_gamma": self.price_gamma,
+
+                "resource_cost": self.resource_cost,
+                "efficiency":self.efficiency,
             },
             "relationships": {
                 "cpn_router": {"class":type(self.cpn_router),"id":self.cpn_router.id} if self.cpn_router else None, #src node
@@ -126,14 +129,18 @@ class Task( Service):
             "min_bw_demand": self.min_bw_demand,
             "max_delay": self.max_delay,
             "price_gamma": self.price_gamma,
+
+            "resource_cost":self.resource_cost,
+            "efficiency": self.efficiency,
         }
         return metrics
 
-    def update(self):
-        pass
+    #计算任务的资源成本
+    def get_ResourceCost(self):
+
+        return self.resource_cost
 
     def step(self):
-        #TODO：将任务与所属区域内的CPN节点相关联:NetworkSwitch修改为新的类
         if self.status=='init' and self.cpn_router is None:
             _cpn_router_instances = CpnRouter.all()
             for router in _cpn_router_instances:
@@ -172,7 +179,6 @@ class Task( Service):
         target_server.bw_demand += self.bw_demand
 
         #4.compute shortest path
-        #TODO：定义_shortest_path函数
         self.path,link_delay = self.model.topology._shortest_path(origin=self.cpn_router,target=target_server,
                                                                   weight="delay",method="dijkstra",service=self)
         #4. compute delay
@@ -181,21 +187,42 @@ class Task( Service):
         gpu_time = self.flops_demand['gpu'] / (self.gpu_demand * target_server.gpu_flops)
         # TODO:self.comp_sustain_steps =  pcie_time + max(cpu_time,gpu_time)-先忽略IO时延
         self.comp_sustain_steps = max(cpu_time, gpu_time)
-        #TODO:self.trans_sustain_steps = self.disk_demand / self.bw_demand + (len(self.path)-2) * (self.__class__.Mtu/self.bw_demand + Thop) + \link_delay
-        #TODO:先忽略平均每跳处理时延
-        self.trans_sustain_steps = self.disk_demand*1e9 / (self.bw_demand*1e9) + (len(self.path)-2) * (self.__class__.Mtu/(self.bw_demand*1e9)) + \
+        #TODO:self.trans_sustain_steps = self.disk_demand / self.bw_demand + (len(self.path)-2) * (self.__class__.Mtu/self.bw_demand + Thop) + link_delay
+        #link_delay包括了每跳转发排毒时延
+        self.trans_sustain_steps = self.disk_demand / self.bw_demand + \
+                                   (len(self.path)-2) * (self.__class__.Mtu/(self.bw_demand*1e9)) + \
                                    link_delay
 
-        #TODO:资源定价计算和效用计算
-        # self.resource_cost =
         total_time = self.trans_sustain_steps + self.comp_sustain_steps
+
+        #TODO:资源定价计算和效用计算
+        #带宽总成本
+        bw_price = self.bw_demand / 0.5 * self.model.params["cost"]["Pb"]
+
+        #cpu成本
+        cpu_base = self.model.params["cost"]["cpu"]["base_price"]
+        Ccpu = self.model.params["cost"]["cpu"]["C"]
+        cpu_fbase = self.model.params["cost"]["cpu"]["fbase"]
+        cpu_price = cpu_base + Ccpu*self.cpu_demand*((target_server.cpu_flops-cpu_fbase)/cpu_fbase)
+
+        #gpu成本
+        gpu_base = self.model.params["cost"]["gpu"]["base_price"]
+        Cgpu = self.model.params["cost"]["gpu"]["C"]
+        gpu_fbase = self.model.params["cost"]["gpu"]["fbase"]
+        gpu_price = gpu_base + Cgpu*self.gpu_demand*((target_server.gpu_flops-gpu_fbase)/gpu_fbase)
+
+        #区域成本
+        Gbase = min(self.model.params["cost"]["economy_vitality"])
+        Garea = self.model.params["cost"]["economy_vitality"][self.area_ID-1]
+        Vloc = (Garea - Gbase) / Gbase
+        #计算资源成本 (单位时间计算成本*计算时间)
+        compute_price =   ((cpu_price + gpu_price)*(1+Vloc)) * self.comp_sustain_steps
+        #TODO:待补充-网络跨域传输成本
+        #总资源成本
+        self.resource_cost = bw_price + compute_price
+
         self.efficiency = math.exp(-( total_time + self.price_gamma * self.resource_cost ))
 
         self.being_provisioned = True
-
-
-
-
-
 
 

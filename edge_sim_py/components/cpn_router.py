@@ -77,7 +77,6 @@ class CpnRouter(ComponentManager, Agent):
 
 
     def step(self):
-        #TODO：将当前任务列表中的任务放入控制器中，控制器为Controller类型
         for service in self.services:
             self.controller.schedule_services.append(service)
         # 清空任务队列

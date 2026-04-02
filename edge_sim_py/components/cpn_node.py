@@ -205,7 +205,6 @@ class CpnNode(EdgeServer):
                 unload_service.status = "loading"
 
             # create network flow for current service
-            #TODO：修改NetworkFlow属性
             flow = NetworkFlow(
                 topology=self.model.topology,
                 source=unload_service.cpn_router,  #service src node
