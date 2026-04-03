@@ -24,5 +24,6 @@
                     "area_nums":3,
                     "user_nums":10
                 },
-                "max_tasks": 10
+                "max_tasks": 10,
+                "policy": "static"
 }

@@ -76,9 +76,12 @@ class MySimulator(Simulator):
                     "user_nums":1,
                 },
                 "max_tasks":1,
+                "policy":'random',
             }
         #预计最大任务数量
         self.max_tasks = self.params["max_tasks"]
+        #部署策略
+        self.policy = self.params["policy"]
         #仿真停止标准
         if self.stopping_criterion == None:
             self.stopping_criterion = lambda:  ( all(task.status=='end' for task in Task.all())
@@ -142,6 +145,11 @@ class MySimulator(Simulator):
     def setUp(self,input_file: str)->None:
         self.initialize(input_file=input_file)
         self.initialize_Users()
+        #设置控制器策略
+        if self.policy:
+            for agent in Controller.all():
+                agent.policy = self.policy
+
 
     #从json文件中读取仿真参数设置
     @classmethod

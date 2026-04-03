@@ -199,9 +199,12 @@ class Task( Service):
 
         total_time = self.trans_sustain_steps + self.comp_sustain_steps
 
-        #TODO:修改带宽成本的计价
+        #TODO:修改带宽成本的计价:增加跨域成本，跨域乘以2
         #带宽总成本(1s为单位)
         bw_price = self.model.params["cost"]["Pb"][str(self.bw_demand)] / 3600 * self.trans_sustain_steps
+        # 跨域乘以2
+        if self.area_ID!=target_server.area_ID:
+            bw_price*=2
 
         #cpu成本
         cpu_base = self.model.params["cost"]["cpu"]["base_price"]
@@ -221,7 +224,7 @@ class Task( Service):
         Vloc = Garea / Gbase
         #计算资源成本 (单位时间计算成本*计算时间)
         compute_price =   ((cpu_price + gpu_price) * Vloc) * self.comp_sustain_steps
-        #TODO:待补充-网络跨域传输成本
+
         #总资源成本
         self.resource_cost = bw_price + compute_price
 
