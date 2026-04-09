@@ -3,8 +3,7 @@
                     "Pb": {
                       "1": 400,
                       "2": 800,
-                      "5":1200,
-                      "10": 1500
+                      "5":1200
                     },
                     "cpu":{
                         "base_price":0.027,
@@ -22,8 +21,8 @@
                 "user":{
                     "lambda_rate":0,
                     "area_nums":3,
-                    "user_nums":10
+                    "user_nums":1
                 },
-                "max_tasks": 10,
-                "policy": "static"
+                "max_tasks": 50,
+                "policy": "dynamic"
 }

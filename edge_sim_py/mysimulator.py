@@ -40,7 +40,6 @@ class MySimulator(Simulator):
         obj_id: int = None,
         scheduler: Callable = DefaultScheduler,  #调度器
         dump_interval: int = 100,
-        max_tasks:int=0,
         params: dict = None,):
         Simulator.__init__(self,stopping_criterion=stopping_criterion,
                            tick_duration=tick_duration,tick_unit=tick_unit,
@@ -84,7 +83,7 @@ class MySimulator(Simulator):
         self.policy = self.params["policy"]
         #仿真停止标准
         if self.stopping_criterion == None:
-            self.stopping_criterion = lambda:  ( all(task.status=='end' for task in Task.all())
+            self.stopping_criterion = lambda:  ( all( (task.status=='end' or task.status=='scheduled')for task in Task.all())
                                                     and self.schedule.total_count >= self.max_tasks)
 
 
@@ -103,7 +102,7 @@ class MySimulator(Simulator):
             # Checks if the simulation should end according to the stop condition
             if self.stopping_criterion():
                 self.monitor()
-            self.running = False if self.stopping_criterion(self) else True
+            self.running = False if self.stopping_criterion() else True
 
 
     def step(self):
@@ -133,6 +132,20 @@ class MySimulator(Simulator):
         print("Tasks:")
         Task.print_Tasks_metric()
 
+        # ----指标统计-----
+        R_list = self.get_R()
+        #min-max归一化
+        min_R=min(R_list)
+        max_R=max(R_list)
+        for task in Task.all():
+            task.efficiency = 1-(task.efficiency-min_R)/(max_R-min_R)
+        R_list = self.get_R()
+        D = self.get_D()
+
+        print("total R:",sum(R_list))
+        print("D:",D)
+
+
     #初始随机生成用户
     def initialize_Users(self):
         for i in range(self.params["user"]["user_nums"]):
@@ -143,12 +156,46 @@ class MySimulator(Simulator):
 
     #重定义初始化
     def setUp(self,input_file: str)->None:
-        self.initialize(input_file=input_file)
-        self.initialize_Users()
+        self.initialize(input_file=input_file) # 初始化拓扑
+        self.initialize_Users()  #初始化用户
         #设置控制器策略
         if self.policy:
             for agent in Controller.all():
                 agent.policy = self.policy
+
+    #重置环境
+    def reset(self):
+        for node in CpnNode.all():
+            node.waiting_queue = []
+            node.download_queue = []
+            node.compute_queue = []
+            #资源占用量
+            node.cpu_demand = 0
+            node.gpu_demand = 0
+            node.bw_demand = 0
+            node.disk_demand = 0
+
+        #清空用户
+        MyUser._instances = []
+        MyUser._object_count = 0
+        self.users = []
+
+        #清空任务
+        Task._instances = []
+        Task._object_count = 0
+
+        #清空任务列表
+        for agent in Controller.all():
+            agent.schedule_services = []
+            agent.task_count = 0
+            agent.unsuccess_count = 0
+
+        for agent in CpnRouter.all():
+            agent.services = []
+
+        self.schedule.steps=0
+        self.schedule.time=0
+
 
 
     #从json文件中读取仿真参数设置
@@ -160,10 +207,10 @@ class MySimulator(Simulator):
         return params
 
     def get_R(self):
-        total_R=.0
+        R_list = []
         for task in Task.all():
-            total_R += task.efficiency
-        return total_R
+            R_list.append(task.efficiency)
+        return R_list
 
     def get_D(self):
         #cpu负载程度
@@ -184,7 +231,7 @@ class MySimulator(Simulator):
 
         #TODO:综合负载均衡度
         J_total = 0.25*cpu_Jain + 0.25*gpu_Jain + 0.25*bw_Jain + 0.25*disk_Jain
-        D = np.exp(-(1-J_total))
+        D = J_total
         return D
 
 

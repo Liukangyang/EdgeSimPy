@@ -67,8 +67,6 @@ class CpnNode(EdgeServer):
         self.gpu_demand = 0
         self.bw_demand = 0
 
-        #TODO :资源定价
-
         # correlation network router
         self.network_gw = None
 
@@ -245,17 +243,40 @@ class CpnNode(EdgeServer):
         # Checking if the host would have resources to host the registry and its (additional) layers
         can_host = free_cpu >= service.cpu_demand and free_gpu >= service.gpu_demand and free_disk >= service.disk_demand \
         and free_bw >= service.min_bw_demand
-        return can_host
+        '''
+        #Check if estimated delay meet the task's requirment
+        path, link_delay = self.model.topology._shortest_path(origin=service.cpn_router, target=self,
+                                                                   weight="delay", method="dijkstra", service=self)
+        trans_delay = service.disk_demand / service.min_bw_demand + \
+                                   (len(path)-2) * (1500/(service.min_bw_demand*1e9)) + \
+                                   link_delay
+        comp_delay = max(service.flops_demand['cpu']*1e9/(service.cpu_demand*self.cpu_flops), \
+                         service.flops_demand['gpu']*1e9/(service.gpu_demand*self.gpu_flops))
+        meet_delay = (trans_delay+comp_delay) <= service.max_delay
+        '''
+        return (can_host)
 
 
     def _get_task(self):
         return self.services
 
+    #获取节点状态
+    def get_State(self)->list:
+        cpn_state=[]
+        metrics = self.collect()
+        cpn_state = [metrics["CPU"],metrics["GPU"],metrics["Disk"],metrics["Bandwidth"],\
+                     metrics["cpu_flops"],metrics["gpu_flops"],\
+                     metrics["resource_ratio"]["cpu"], metrics["resource_ratio"]["gpu"],\
+                     metrics["resource_ratio"]["disk"],metrics["resource_ratio"]["bw"]]
+        # TODO:考虑归一化
+        return cpn_state
+
+
     #指标打印
     @classmethod
     def print_Servers_metric(cls,obj_id:int=0):
             lines = []
-            lines.append( "| ID | CPU | GPU | Disk | BW |                     ratio                        | d_t | c_t | tasks |")
+            lines.append( "| ID | CPU | GPU | Disk | BW |                     ratio(%)                     | d_t | c_t | tasks |")
             lines.append("|----|-----|-----|------|----|--------------------------------------------------|-----|-----|-------|")
             if obj_id == 0:
                 for server in cls._instances:

@@ -11,20 +11,21 @@ from edge_sim_py.components.Controller import Controller
 class MyScheduler(MesaBaseScheduler):
     """Class responsible for scheduling the events that take place at each step of the simulation model."""
 
+    total_count = 0
+    unsuccess_count = 0
+
     @classmethod
     def statistics(cls):
         # 统计量
-        total_count = 0
-        unsuccessful_count = 0
         for agent in Controller.all():
-            total_count += agent.task_count
-            unsuccessful_count += agent.unsuccess_count
+            MyScheduler.total_count += agent.task_count
+            MyScheduler.unsuccess_count += agent.unsuccess_count
 
         # 打印总任务统计表格
         print("+********************************+")
         print("| 总任务数  | 未成功任务数 |")
         print("+********************************+")
-        print(f"| {total_count:<10} | {unsuccessful_count:<10} |")
+        print(f"| {MyScheduler.total_count:<10} | {MyScheduler.unsuccess_count:<10} |")
         print("+********************************+\n")
 
 

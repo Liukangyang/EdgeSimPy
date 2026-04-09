@@ -94,7 +94,7 @@ class Task( Service):
                 "max_delay": self.max_delay,
                 "price_gamma": self.price_gamma,
 
-                "time": self.trans_sustain_steps + self.comp_sustain_steps,
+                "delay": self.trans_sustain_steps + self.comp_sustain_steps,
                 "resource_cost": self.resource_cost,
                 "efficiency":self.efficiency,
             },
@@ -131,10 +131,10 @@ class Task( Service):
             "sla_level": self.sla_level,
 
             "min_bw_demand": self.min_bw_demand,
-            "max_delay": self.max_delay,
+            "max_delay": round(self.max_delay,2),
             "price_gamma": self.price_gamma,
 
-            "time":round(self.trans_sustain_steps+self.comp_sustain_steps,2),
+            "delay":round(self.trans_sustain_steps+self.comp_sustain_steps,2),
             "resource_cost":round(self.resource_cost,2),
             "efficiency": self.efficiency,
         }
@@ -156,9 +156,9 @@ class Task( Service):
 
         if self.status == 'finished':
             self.status = 'end'
-            info = self._to_dict()
-            print("task "+str(info["attributes"]['id']) +" has been finished!")
-            print(info)
+            # info = self._to_dict()
+            # print("task "+str(info["attributes"]['id']) +" has been finished!")
+            # print(info)
             self.being_provisioned = False
             self._available = False
 
@@ -187,8 +187,8 @@ class Task( Service):
                                                                   weight="delay",method="dijkstra",service=self)
         #4. compute delay
         pcie_time = self.disk_demand / target_server.pcie_speed
-        cpu_time = self.flops_demand['cpu']*1e9 / (self.cpu_demand * target_server.cpu_flops)
-        gpu_time = self.flops_demand['gpu']*1e9 / (self.gpu_demand * target_server.gpu_flops)
+        cpu_time = self.flops_demand['cpu'] / (self.cpu_demand * target_server.cpu_flops)
+        gpu_time = self.flops_demand['gpu'] / (self.gpu_demand * target_server.gpu_flops)
         # TODO:self.comp_sustain_steps =  pcie_time + max(cpu_time,gpu_time)-先忽略IO时延
         self.comp_sustain_steps = max(cpu_time, gpu_time)
         #TODO:self.trans_sustain_steps = self.disk_demand / self.bw_demand + (len(self.path)-2) * (self.__class__.Mtu/self.bw_demand + Thop) + link_delay
@@ -199,24 +199,31 @@ class Task( Service):
 
         total_time = self.trans_sustain_steps + self.comp_sustain_steps
 
-        #TODO:修改带宽成本的计价:增加跨域成本，跨域乘以2
+        #TODO:修改带宽成本的计价:跨域距离每增加100KM，价格增加10%
         #带宽总成本(1s为单位)
         bw_price = self.model.params["cost"]["Pb"][str(self.bw_demand)] / 3600 * self.trans_sustain_steps
-        # 跨域乘以2
+        # 跨域则按照距离增加基础价格
         if self.area_ID!=target_server.area_ID:
-            bw_price*=2
+            distance = 0
+            #获取传输路径的总距离
+            for i in range(len(self.path)-1):
+                link = self.model.topology[self.path[i]][self.path[i+1]]
+                distance += link["distance"]
+            #按照距离计费
+            scale = round(distance / 100,1)
+            bw_price *= (1+0.1*scale)
 
         #cpu成本
         cpu_base = self.model.params["cost"]["cpu"]["base_price"]
         Ccpu = self.model.params["cost"]["cpu"]["C"]
         cpu_fbase = self.model.params["cost"]["cpu"]["fbase"]
-        cpu_price = cpu_base + Ccpu*self.cpu_demand*((target_server.cpu_flops/1e9-cpu_fbase)/cpu_fbase)
+        cpu_price = cpu_base + Ccpu*self.cpu_demand*((target_server.cpu_flops-cpu_fbase)/cpu_fbase)
 
         #gpu成本
         gpu_base = self.model.params["cost"]["gpu"]["base_price"]
         Cgpu = self.model.params["cost"]["gpu"]["C"]
         gpu_fbase = self.model.params["cost"]["gpu"]["fbase"]
-        gpu_price = gpu_base + Cgpu*self.gpu_demand*((target_server.gpu_flops/1e9-gpu_fbase)/gpu_fbase)
+        gpu_price = gpu_base + Cgpu*self.gpu_demand*((target_server.gpu_flops-gpu_fbase)/gpu_fbase)
 
         #区域成本
         Gbase = min(self.model.params["cost"]["economy_vitality"])
@@ -228,18 +235,30 @@ class Task( Service):
         #总资源成本
         self.resource_cost = bw_price + compute_price
 
-        self.efficiency = math.exp(-( total_time + self.price_gamma * self.resource_cost ))
+        self.efficiency = total_time + self.price_gamma * self.resource_cost
 
         self.being_provisioned = True
 
+    #获取任务状态
+    def get_State(self)->list:
+        task_state = []
+        metrics = self.collect()
+        task_state=[metrics["flops_demand"]["cpu"],metrics["flops_demand"]["gpu"],\
+                    metrics["cpu_demand"],metrics["gpu_demand"],metrics["disk_demand"],\
+                    metrics["max_delay"],metrics["price_gamma"]  ]
+        #TODO:考虑归一化
+        return task_state
+
+    def __lt__(self,other):
+        return self.id < other.id
 
     #统计打印函数
     @classmethod
     def print_Tasks_metric(cls,obj_id:int=0):
         lines = []
         lines.append(
-            "| ID | Area | Server | task_type | sla_level |  time | cost |     efficiency     |")
-        lines.append("|----|------|--------|-----------|-----------|-------|------|--------------------|")
+            "| ID | Area | Server | task_type | sla_level |  max_delay  |  delay |  cost  |     efficiency     |")
+        lines.append("|----|------|--------|-----------|-----------|-------------|--------|--------|--------------------|")
         if obj_id == 0:
             for task in cls._instances:
                 metrics = task.collect()
@@ -248,8 +267,9 @@ class Task( Service):
                     f"{metrics['areaID']}   |   "
                      f"{metrics['Server']}    |     "
                     f"{metrics['task_type']}     |     "
-                    f"{metrics['sla_level']}     | "
-                    f"{metrics["time"]} | "
+                    f"{metrics['sla_level']}     |     "
+                    f"{metrics["max_delay"]}    |  "
+                    f"{metrics["delay"]} |  "
                     f"{metrics['resource_cost']} |   "
                     f"{metrics['efficiency']} |"
                 )
@@ -263,8 +283,8 @@ class Task( Service):
                 f"{metrics['Server']} | "
                 f"{metrics['task_type']}  | "
                 f"{metrics['sla_level']} | "
-                f"{metrics["time"]} | "
-                f"{metrics['resource_cost']} | "
+                f"{metrics["delay"]} | "
+                f"{metrics['resource_cost']} |"
                 f"{metrics['efficiency']} | "
             )
             lines.append(data_row)

@@ -80,13 +80,13 @@
                 "id": 1,
                 "available": true,
                 "model_name": "CpnNode",
-                "cpu": 100,
-                "gpu":120,
-                "disk": 500,
-                "bandwidth": 80,
-                "cpu_flops":1e9,
-                "gpu_flops": 3e10,
-                "pcie_speed": 2e9,
+                "cpu": 200,
+                "gpu":250,
+                "disk": 1000,
+                "bandwidth": 100,
+                "cpu_flops":2,
+                "gpu_flops": 2,
+                "pcie_speed": 3e9,
                 "cpu_demand": 0,
                 "gpu_demand":0,
                 "disk_demand": 0,
@@ -96,7 +96,7 @@
                     1,
                     1
                 ],
-                "max_concurrent_layer_downloads": 100,
+                "max_concurrent_layer_downloads": 1000,
                 "active": true
             },
             "relationships": {
@@ -113,13 +113,13 @@
                 "id": 2,
                 "available": true,
                 "model_name": "CpnNode",
-                "cpu": 80,
-                "gpu":100,
+                "cpu": 160,
+                "gpu":210,
                 "disk": 500,
-                "bandwidth": 50,
-                "cpu_flops":2e9,
-                "gpu_flops":4e10,
-                "pcie_speed": 3e9,
+                "bandwidth": 120,
+                "cpu_flops":2,
+                "gpu_flops":3,
+                "pcie_speed": 2e9,
                 "cpu_demand": 0,
                 "gpu_demand":0,
                 "disk_demand": 0,
@@ -129,7 +129,7 @@
                     3,
                     1
                 ],
-                "max_concurrent_layer_downloads": 100,
+                "max_concurrent_layer_downloads": 1000,
                 "active": true
             },
             "relationships": {
@@ -146,12 +146,12 @@
                 "id": 3,
                 "available": true,
                 "model_name": "CpnNode",
-                "cpu": 70,
-                "gpu":160,
-                "disk": 400,
-                "bandwidth": 60,
-                "cpu_flops":1e9,
-                "gpu_flops":2e10,
+                "cpu": 220,
+                "gpu":180,
+                "disk": 500,
+                "bandwidth": 80,
+                "cpu_flops":1,
+                "gpu_flops":1,
                 "pcie_speed": 2e9,
                 "cpu_demand": 0,
                 "gpu_demand":0,
@@ -162,7 +162,7 @@
                     2,
                     3
                 ],
-                "max_concurrent_layer_downloads": 100,
+                "max_concurrent_layer_downloads": 1000,
                 "active": true
             },
             "relationships": {
@@ -194,10 +194,10 @@
         {
             "attributes": {
                 "id": 1,
-                "delay": 5,
+                "delay": 0.5,
                 "bandwidth": 1000,
                 "bandwidth_demand": 0,
-                "distance": 10,
+                "distance": 50,
                 "active": true
             },
             "relationships": {
@@ -222,10 +222,10 @@
         {
           "attributes": {
                 "id": 2,
-                "delay": 5,
+                "delay": 0.5,
                 "bandwidth": 1000,
                 "bandwidth_demand": 0,
-                "distance": 20,
+                "distance": 100,
                 "active": true
             },
             "relationships": {
@@ -250,10 +250,10 @@
         {
           "attributes": {
                 "id": 3,
-                "delay": 5,
+                "delay": 0.5,
                 "bandwidth": 1000,
                 "bandwidth_demand": 0,
-                "distance": 30,
+                "distance": 120,
                 "active": true
             },
             "relationships": {
@@ -278,10 +278,10 @@
         {
           "attributes": {
                 "id": 4,
-                "delay": 5,
+                "delay": 0.5,
                 "bandwidth": 1000,
                 "bandwidth_demand": 0,
-                "distance": 8,
+                "distance": 10,
                 "active": true
             },
             "relationships": {
@@ -306,10 +306,10 @@
         {
           "attributes": {
                 "id": 5,
-                "delay": 5,
+                "delay":0.5,
                 "bandwidth": 1000,
                 "bandwidth_demand": 0,
-                "distance": 6,
+                "distance": 10,
                 "active": true
             },
             "relationships": {
@@ -334,10 +334,10 @@
         {
           "attributes": {
                 "id": 6,
-                "delay": 5,
+                "delay": 0.5,
                 "bandwidth": 1000,
                 "bandwidth_demand": 0,
-                "distance": 2,
+                "distance": 10,
                 "active": true
             },
             "relationships": {

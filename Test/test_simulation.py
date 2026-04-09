@@ -41,7 +41,6 @@ class SimulationTestCase(unittest.TestCase):
         return datasets
 
 
-
     def testHello(self):
         print("Hello")
 
@@ -240,14 +239,12 @@ class SimulationTestCase(unittest.TestCase):
         #由用户生成任务并上传到CPNRouter中
         for user in MyUser.all():
             user.step()
-
         # CPN路由器上传到控制器队列中
         for router in CpnRouter.all():
             router.step()
         # 控制器进行决策
         for controller in Controller.all():
-            controller.step()
-
+            controller.step(0,0)
 
         # 算力节点执行任务
         for node in CpnNode.all():
@@ -257,15 +254,17 @@ class SimulationTestCase(unittest.TestCase):
         simulator.monitor()
 
         #打印调度后的总结果
-        total_R = simulator.get_R()
+        R_list = simulator.get_R()
+        #min-max归一化
+        min_R=min(R_list)
+        max_R=max(R_list)
+        for task in Task.all():
+            task.efficiency = 1-(task.efficiency-min_R)/(max_R-min_R)
+        R_list = simulator.get_R()
+
         D = simulator.get_D()
-        result = 0.5*total_R + 0.5*D
-        print("R:",total_R)
+        print("total R:",sum(R_list))
         print("D:",D)
-        print("Result:",result)
-
-
-
 
 if __name__ == '__main__':
     unittest.main()

@@ -13,3 +13,7 @@ from .components import *
 
 # EdgeSimPy component builders
 from .dataset_generator import *
+
+from .environment import CpnEnvironment
+
+from .config import *

@@ -4,7 +4,7 @@ import numpy as np
 from mesa import Agent
 
 from edge_sim_py.component_manager import ComponentManager
-
+import copy
 
 class Controller(ComponentManager,Agent):
     _instances = []
@@ -39,7 +39,7 @@ class Controller(ComponentManager,Agent):
         return dictionary
 
 
-    def step(self):
+    def step(self,node,bw)->list:
         if len(self.schedule_services)>0:
             self.task_count += len(self.schedule_services) # 累积总任务数量
             if len(self.cpn_nodes)>0:
@@ -48,29 +48,31 @@ class Controller(ComponentManager,Agent):
                 elif self.policy=="static":
                     self.static_policy()
                 elif self.policy=="dynamic":
-                    self.dynamic_policy()
+                    self.dynamic_policy(node,bw)
                 else:
                     print("Unknown policy: " + self.policy)
             else: print("No available cpn node available!")
-
+        services = copy.deepcopy(self.schedule_services)
         self.schedule_services = [] #清空调度列表
+        return services
 
 
     ####### 随机策略
     def random_policy(self):
         count = 0
         for  service in self.schedule_services:
-             n = np.random.randint(len(self.cpn_nodes))
+             node = np.random.choice(self.cpn_nodes)
              count = 1
-             while(not self.cpn_nodes[int(n)].has_capacity_to_host(service) and count <= len(self.cpn_nodes)+1):
-                 n = np.random.randint(0, len(self.cpn_nodes))
+             while((not node.has_capacity_to_host(service)) and count <= 10):
+                 np.random.seed(count)
+                 node = np.random.choice(self.cpn_nodes)
                  count+=1
 
-             if count>len(self.cpn_nodes)+1:
+             if count>10:
                  print("No cpn node can host the task!")
                  self.unsuccess_count += 1
              else:
-                 target_server = self.cpn_nodes[n]
+                 target_server = node
                  # 部署并分配带宽资源
                  service.bw_demand = service.min_bw_demand
                  service.provision(target_server)
@@ -110,8 +112,26 @@ class Controller(ComponentManager,Agent):
 
 
     ####### TODO：智能策略
-    def dynamic_policy(self):
-        pass
-    pass
+    def dynamic_policy(self,node,bw):
+        if type(node)==list and type(bw)==list:
+            for i in range(len(self.schedule_services)):
+                service = self.schedule_services[i]
+                if node[i].has_capacity_to_host(service):
+                    service.bw_demand = bw[i]
+                    service.provision(node[i])
+                else:
+                    service.status='end'
+                    self.unsuccess_count += 1
+        else:
+            for i in range(len(self.schedule_services)):
+                service = self.schedule_services[i]
+                #当前决策下是否具有足够的资源可供部署
+                if node.has_capacity_to_host(service):
+                    service.bw_demand = bw
+                    service.provision(node)
+                else:
+                    #没有足够资源则任务部署失败
+                    service.status = 'end'
+                    self.unsuccess_count += 1
 
 

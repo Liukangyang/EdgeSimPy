@@ -77,7 +77,6 @@ class CpnRouter(ComponentManager, Agent):
 
 
     def step(self):
-        for service in self.services:
-            self.controller.schedule_services.append(service)
+        self.controller.schedule_services.extend(self.services)
         # 清空任务队列
         self.services = []
