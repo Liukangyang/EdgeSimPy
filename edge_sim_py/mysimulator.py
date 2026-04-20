@@ -32,6 +32,15 @@ def get_Jain(x:list=[]):
         jain_index = (sum_x ** 2) / (n * sum_x_squared)
         return jain_index
 
+def get_Variance(x:list=[]):
+    if len(x)==0 or len(x)==1:
+        return 0
+    else:
+        n = len(x)
+        avg = np.mean(x)
+        V = np.sum([(e-avg)**2 for e in x]) / n
+        return np.sqrt(V)
+
 class MySimulator(Simulator):
     def __init__(self,
         stopping_criterion: Callable = None,  # 停止标准
@@ -145,11 +154,28 @@ class MySimulator(Simulator):
         print("total R:",sum(R_list))
         print("D:",D)
 
+        # 指标结果
+        # 所有任务总时延
+        total_delay = 0
+        # 所有任务总成本
+        total_cost = 0
+        success_tasks=0
+        for task in Task.all():
+            metrics = task.collect()
+            total_delay += metrics["delay"]
+            total_cost += metrics["resource_cost"]
+        # 实际任务成功率（即满足时延要求）
+            if task.being_provisioned==True and metrics["delay"]<=metrics["max_delay"]:
+                success_tasks += 1
+
+        print(f"total_delay:{round(total_delay,2)}, total_cost:{round(total_cost,2)}, success_rate:{round(success_tasks/len(Task.all())*100,2)}%")
+
 
     #初始随机生成用户
     def initialize_Users(self):
         for i in range(self.params["user"]["user_nums"]):
             area_ID = np.random.randint(low=1,high=self.params["user"]["area_nums"]+1)
+            # area_ID = 3
             user = MyUser(lambda_rate=self.params["user"]["lambda_rate"],area_ID=area_ID,model=self)
             self.users.append(user)
 
@@ -195,6 +221,8 @@ class MySimulator(Simulator):
 
         self.schedule.steps=0
         self.schedule.time=0
+        # 每次重新迭代时需要将running重置为True
+        self.running = True
 
 
 
@@ -219,19 +247,26 @@ class MySimulator(Simulator):
         bw_ratio=[]
         disk_ratio=[]
         for node in CpnNode.all():
-            cpu_ratio.append(node.cpu_demand / node.cpu)
-            gpu_ratio.append(node.gpu_demand / node.gpu)
-            bw_ratio.append(node.bw_demand / node.bandwidth)
-            disk_ratio.append(node.disk_demand / node.disk)
+            # cpu_ratio.append(node.cpu_demand / node.cpu)
+            gpu_ratio.append(round(node.gpu_demand / node.gpu * 100,2))
+            bw_ratio.append(round(node.bw_demand / node.bandwidth * 100,2))
+            disk_ratio.append(round(node.disk_demand / node.disk * 100,2))
 
-        cpu_Jain = get_Jain(cpu_ratio)
-        gpu_Jain = get_Jain(gpu_ratio)
-        bw_Jain = get_Jain(bw_ratio)
-        disk_Jain = get_Jain(disk_ratio)
-
-        #TODO:综合负载均衡度
-        J_total = 0.25*cpu_Jain + 0.25*gpu_Jain + 0.25*bw_Jain + 0.25*disk_Jain
-        D = J_total
+        # cpu_Jain = get_Jain(cpu_ratio)
+        # gpu_V = get_Jain(gpu_ratio)
+        # bw_V = get_Jain(bw_ratio)
+        # disk_V = get_Jain(disk_ratio)
+        #改为方差计算
+        gpu_V = get_Variance(gpu_ratio)
+        bw_V = get_Variance(bw_ratio)
+        disk_V = get_Variance(disk_ratio)
+        #归一化
+        # max_V = 0.1
+        # min_V = 0
+        # gpu_V = (gpu_V-min_V) / (max_V-min_V)
+        # bw_V = (bw_V-min_V) / (max_V-min_V)
+        # disk_V = (disk_V-min_V) / (max_V-min_V)
+        D = 0.3333*gpu_V + 0.3333*bw_V + 0.3333*disk_V
         return D
 
 

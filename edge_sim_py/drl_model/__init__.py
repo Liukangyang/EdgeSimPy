@@ -1,3 +1,9 @@
 from .dqn import DQN
+from .ddqn import DDQN
+from .ddqn_dist import DistributeDDQN
+from .ddpg import DDPG
 from .net import Net
-
+from .net import PolicyNet
+from .net import CriticNet
+from .replay_buffer import ReplayBuffer
+from .rl_utils import *

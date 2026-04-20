@@ -3,7 +3,7 @@
                     "Pb": {
                       "1": 400,
                       "2": 800,
-                      "5":1200
+                      "5":1400
                     },
                     "cpu":{
                         "base_price":0.027,
@@ -23,6 +23,6 @@
                     "area_nums":3,
                     "user_nums":1
                 },
-                "max_tasks": 50,
+                "max_tasks": 30,
                 "policy": "dynamic"
 }

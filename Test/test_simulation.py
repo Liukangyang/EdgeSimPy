@@ -6,7 +6,7 @@ from edge_sim_py.activation_schedulers.my_scheduler import MyScheduler
 from edge_sim_py.tools import *
 
 class SimulationTestCase(unittest.TestCase):
-    # Dispaly components
+
     def Collect_Components(self) -> dict:
         datasets = {}
 
@@ -39,10 +39,6 @@ class SimulationTestCase(unittest.TestCase):
         for link in NetworkLink.all():
             datasets[f"{link.__class__.__name__}"].append((link._to_dict()))
         return datasets
-
-
-    def testHello(self):
-        print("Hello")
 
     #仿真模块测试
     #1.场景导入测试

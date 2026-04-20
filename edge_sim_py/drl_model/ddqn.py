@@ -11,10 +11,9 @@ from .replay_buffer import  ReplayBuffer
 
 # DQN结构定义
 '''
-DQN网络类
-主要定义DQN网络的结构和接口
+DDQN网络类
 '''
-class DQN():
+class DDQN():
     def __init__(self, n_actions, n_features, n_hidden=40, learning_rate=0.01, reward_decay=0.9, e_greedy=0.9,
                  update_T=200, memory_size=10000, batch_size=500,
                  epsilon_start=1, epsilon_end=0.1,epsilon_decay=500,
@@ -63,7 +62,6 @@ class DQN():
     def build_net(self):
         q_eval = Net(self.n_features, self.n_hidden, self.n_actions).to(self.device)
         q_target = Net(self.n_features, self.n_hidden, self.n_actions).to(self.device)
-        q_target.load_state_dict(q_eval.state_dict())
         return q_eval, q_target
 
     # 存储样本
@@ -89,7 +87,6 @@ class DQN():
         self.steps_done_custom += 1  # 增加全局步数计数器
         return action
 
-    #TODO：核心步骤-网络训练
     def learn(self):
             # print("\ntarget params updated!\n")
 
@@ -103,9 +100,12 @@ class DQN():
 
         # 训练
         q_values = self.q_eval(states).gather(1,actions)  #Q(s,a)
-        # 下个状态的最大Q值
-        max_next_q_values = self.q_target(next_states).max(1)[0].view(-1,1)
-        q_targets = rewards + self.gamma * max_next_q_values * (1 - dones)  # TD误差目标
+
+
+        # 用评估（训练）网络计算at+1
+        next_actions = self.q_eval(next_states).argmax(dim=1,keepdim=True)
+        next_q_values = self.q_target(next_states).gather(1,next_actions)
+        q_targets = rewards + self.gamma * next_q_values * (1 - dones)  # TD误差目标
 
         #计算损失值
         loss = torch.mean(F.mse_loss(q_values, q_targets)) #

@@ -186,11 +186,12 @@ class Task( Service):
         self.path,link_delay = self.model.topology._shortest_path(origin=self.cpn_router,target=target_server,
                                                                   weight="delay",method="dijkstra",service=self)
         #4. compute delay
-        pcie_time = self.disk_demand / target_server.pcie_speed
-        cpu_time = self.flops_demand['cpu'] / (self.cpu_demand * target_server.cpu_flops)
+        # pcie_time = self.disk_demand / target_server.pcie_speed
+        # cpu_time = self.flops_demand['cpu'] / (self.cpu_demand * target_server.cpu_flops)
         gpu_time = self.flops_demand['gpu'] / (self.gpu_demand * target_server.gpu_flops)
         # TODO:self.comp_sustain_steps =  pcie_time + max(cpu_time,gpu_time)-先忽略IO时延
-        self.comp_sustain_steps = max(cpu_time, gpu_time)
+        # self.comp_sustain_steps = max(cpu_time, gpu_time)
+        self.comp_sustain_steps = gpu_time
         #TODO:self.trans_sustain_steps = self.disk_demand / self.bw_demand + (len(self.path)-2) * (self.__class__.Mtu/self.bw_demand + Thop) + link_delay
         #link_delay包括了每跳转发排毒时延
         self.trans_sustain_steps = self.disk_demand / self.bw_demand + \
@@ -225,12 +226,13 @@ class Task( Service):
         gpu_fbase = self.model.params["cost"]["gpu"]["fbase"]
         gpu_price = gpu_base + Cgpu*self.gpu_demand*((target_server.gpu_flops-gpu_fbase)/gpu_fbase)
 
-        #区域成本
+        # 服务器电力成本
         Gbase = min(self.model.params["cost"]["economy_vitality"])
-        Garea = self.model.params["cost"]["economy_vitality"][self.area_ID-1]
+        Garea = self.model.params["cost"]["economy_vitality"][target_server.area_ID-1]
         Vloc = Garea / Gbase
         #计算资源成本 (单位时间计算成本*计算时间)
-        compute_price =   ((cpu_price + gpu_price) * Vloc) * self.comp_sustain_steps
+        # compute_price =  ((cpu_price + gpu_price) * Vloc) * self.comp_sustain_steps
+        compute_price = gpu_price * Vloc * self.comp_sustain_steps
 
         #总资源成本
         self.resource_cost = bw_price + compute_price
@@ -243,9 +245,9 @@ class Task( Service):
     def get_State(self)->list:
         task_state = []
         metrics = self.collect()
-        task_state=[metrics["flops_demand"]["cpu"],metrics["flops_demand"]["gpu"],\
-                    metrics["cpu_demand"],metrics["gpu_demand"],metrics["disk_demand"],\
-                    metrics["max_delay"],metrics["price_gamma"]  ]
+        task_state=[metrics["flops_demand"]["gpu"],\
+                    metrics["gpu_demand"],metrics["disk_demand"],\
+                    metrics["max_delay"]]
         #TODO:考虑归一化
         return task_state
 

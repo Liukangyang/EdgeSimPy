@@ -14,6 +14,6 @@ from .components import *
 # EdgeSimPy component builders
 from .dataset_generator import *
 
-from .environment import CpnEnvironment
+from edge_sim_py.environment.cpn_environment import CpnEnvironment
 
 from .config import *

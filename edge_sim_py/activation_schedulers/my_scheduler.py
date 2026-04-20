@@ -35,14 +35,13 @@ class MyScheduler(MesaBaseScheduler):
         #由用户生成任务并上传到CPNRouter中
         for user in MyUser.all():
             user.step()
-        # for agent in Task.all():
-        #     agent.step()
+
         # CPN路由器上传到控制器队列中
         for router in CpnRouter.all():
             router.step()
         # 控制器进行决策
         for controller in Controller.all():
-            controller.step()
+            controller.step(0,0)
 
         # 算力节点执行任务
         for node in CpnNode.all():

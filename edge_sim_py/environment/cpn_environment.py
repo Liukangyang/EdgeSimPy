@@ -2,7 +2,7 @@ import torch
 
 from edge_sim_py import MyUser, CpnRouter, Controller, CpnNode
 import numpy as np
-
+from edge_sim_py import config
 class CpnEnvironment:
     '''
     初始化
@@ -35,16 +35,18 @@ class CpnEnvironment:
         #动作空间维度
         self.bw_action_dim=len(self.bw_map)
         self.action_dim = len(self.node_map) * len(self.bw_map)
+        # self.action_dim = len(self.node_map)
         #状态空间维度
-        self.state_dim = num_task*7+num_node*10
-
-        #负载均衡程度下限
-        self.Jain_min = Jain_min
+        self.state_dim = num_task*4 + num_node*12
 
         #惩罚系数
-        self.p1=-10
-        self.p2=-10
+        self.p1=-5 #资源约束惩罚
+        self.p2=-20
 
+        #奖励权重
+        self.lambda_1=0.333
+        self.lambda_2=0.333
+        self.lambda_3=0.333
         #当前奖励
         self.reward = 0
         #状态
@@ -65,6 +67,7 @@ class CpnEnvironment:
     def reset(self):
         #重置环境
         self.simulator.reset()
+
         #重新产生用户
         self.simulator.initialize_Users()
         #任务生成：每一步每个用户生成一个任务
@@ -81,8 +84,9 @@ class CpnEnvironment:
                 state.extend(task_state)
 
         #CPN节点状态
+        #TODO:输入任务的源节点
         for node in CpnNode.all():
-            cpn_state = node.get_State()
+            cpn_state = node.get_State(Controller.all()[0].schedule_services[0].cpn_router)
             state.extend(cpn_state)
 
         #转化为tensor量
@@ -90,6 +94,9 @@ class CpnEnvironment:
         # state_tensor  = state_tensor.unsqueeze(0)
         state = self.normalized_state(state) #归一化处理
         self.state = state
+
+        self.simulator.schedule.steps = 0
+        self.simulator.schedule.time = 0
         return state
 
 
@@ -99,8 +106,9 @@ class CpnEnvironment:
     def step(self,action):
         #1.解析动作
         #TODO:转化为选择的CPN节点对象
-        selected_node = CpnNode.all()[self.node_map[action // self.bw_action_dim]-1]
+        selected_node = CpnNode.all()[action // self.bw_action_dim]
         bw = self.bw_map[action % self.bw_action_dim]
+        # selected_node = CpnNode.all()[action]
         #2.执行动作
         services=[]
         for controller in Controller.all():
@@ -108,17 +116,39 @@ class CpnEnvironment:
 
         #3.计算奖励值
         reward = 0
+        delay_reward = 0
+        cost_reward = 0
+        variance_reward = 0
+        success_count = 0
+        total_count = len(services)
         for service in services:
-            if not service.being_provisioned: #不满足资源约束未成功部署
-               reward += self.p1
-            else:#计算效用+时延超出惩罚
+            if  service.being_provisioned: #成功部署的
+               success_count += 1
                delay = service.trans_sustain_steps + service.comp_sustain_steps
                max_delay = service.max_delay
-               reward += (max_delay-delay) - service.price_gamma*service.resource_cost
-        #惩罚部分：负载均衡判断
-        Jain = self.simulator.get_D()
-        if Jain<self.Jain_min:
-            reward += self.p2
+               # 时延奖励
+               # max_delay_standardization = (max_delay - 5)/(80-5)
+               # delay_standardization = (delay - 5)/(80-5)
+               # if(max_delay_standardization<0 or delay_standardization<0):
+               #     print("delay standardization error!")
+               # delay_reward = max_delay_standardization - delay_standardization
+               delay_reward = max_delay - delay
+
+               #成本奖励
+               # cost_reward = -( service.resource_cost-config.cost_scope["min"] ) / (config.cost_scope["max"]-config.cost_scope["min"])
+               cost_reward = -service.resource_cost
+               if(cost_reward > 0):
+                   print("cost standardization error")
+        # 计算负载均衡方差(增大权重)
+        variance_reward = -self.simulator.get_D()
+        # 判断任务是否成功部署
+        if success_count > 0:
+            reward += self.lambda_1 * delay_reward + self.lambda_2 * cost_reward + self.lambda_3 * variance_reward
+        else:
+            # 叠加未成功部署的惩罚
+            reward += self.p1 * (total_count-success_count)
+        # 叠加未成功部署的惩罚
+        reward += self.p1 * (total_count-success_count)
 
         done = self.simulator.stopping_criterion()
 
@@ -141,7 +171,7 @@ class CpnEnvironment:
 
         #CPN节点状态
         for node in CpnNode.all():
-            cpn_state = node.get_State()
+            cpn_state = node.get_State(Controller.all()[0].schedule_services[0].cpn_router)
             new_state.extend(cpn_state)
 
         self.reward = reward

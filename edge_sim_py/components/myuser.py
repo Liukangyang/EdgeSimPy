@@ -92,6 +92,7 @@ class MyUser(User):
             self.last_task_step = self.model.schedule.steps
             # 将任务上传到区域内的CPN路由器缓存队列上
             self.task.step()
+            # print(f"generate task at step:{self.model.schedule.steps}")
         #按照指定时间生成任务
         else:
             #1.初始先生成随机时间间隔
@@ -111,11 +112,11 @@ class MyUser(User):
 
 
     def generate_newTask(self):
-        #TODO:生成新任务
-        #随机生成任务类型
-        task_type = np.random.randint(1,4)
-        sla_level = np.random.randint(1,4)
 
+        #TODO：随机生成任务类型
+        task_type = 3 #固定任务类型为3
+        sla_level = 2 #固定SLA等级为2
+        #
         demand={
              "cpu_flops":round(np.random.rand()*(task_list["cpu_flops"][task_type-1][1]-task_list["cpu_flops"][task_type-1][0])
                                    +task_list["cpu_flops"][task_type-1][0]),
@@ -127,17 +128,32 @@ class MyUser(User):
         }
 
         sla ={
-            "min_bw":np.random.choice(sla_list["min_bw"]),
-
-            "max_delay": round(np.random.rand()*(sla_list["max_delay"][sla_level-1][1]-sla_list["max_delay"][sla_level-1][0])
+            "min_bw":0, #初始带宽固定为0
+            # 最大时延按照正态分布生成
+            "max_delay":round(np.random.rand()*(sla_list["max_delay"][sla_level-1][1]-sla_list["max_delay"][sla_level-1][0])
                                    +sla_list["max_delay"][sla_level-1][0],1),
 
-            "price_gamma": round(np.random.rand()*(sla_list["price_gamma"][sla_level-1][1]-sla_list["price_gamma"][sla_level-1][0])
-                                   +sla_list["price_gamma"][sla_level-1][0],1)
+            "price_gamma": 1
         }
 
-        #TODO：在每次只生成一个任务情形下， 任务ID与用户ID可不同
-        area_ID=np.random.randint(1,4)
+        area_ID = self.area_ID
+
+        # demand={
+        #      "cpu_flops":round(np.random.rand()*(task_list["cpu_flops"][task_type-1][1]-task_list["cpu_flops"][task_type-1][0])
+        #                            +task_list["cpu_flops"][task_type-1][0]),
+        #     "gpu_flops":90,
+        #      "cpu":np.random.randint(low = task_list["cpu"][task_type-1][0],high = task_list["cpu"][task_type-1][1]+1),
+        #     "gpu":8,
+        #     "disk":35
+        # }
+        #
+        # sla ={
+        #     "min_bw":5, #带宽需求固定为5GB
+        #     "max_delay":28,
+        #     "price_gamma": 1
+        # }
+        #
+        # area_ID = 1
         task = Task(area_ID=area_ID,status='init',demand=demand,sla=sla,task_type=task_type,sla_level=sla_level,model=self.model)
         self.task_type = task_type
         self.sla_level = sla_level

@@ -6,7 +6,7 @@ from edge_sim_py.components.network_flow import NetworkFlow
 from edge_sim_py.components.container_registry import ContainerRegistry
 from edge_sim_py.components.container_image import ContainerImage
 from edge_sim_py.components.container_layer import ContainerLayer
-
+from edge_sim_py import config
 # Mesa modules
 from mesa import Agent
 
@@ -75,6 +75,7 @@ class CpnNode(EdgeServer):
 
         #area_ID
         self.area_ID = area_ID
+
 
 
 
@@ -153,6 +154,8 @@ class CpnNode(EdgeServer):
                 "disk":round(self.disk_demand/self.disk,2),
                 "bw":round(self.bw_demand/self.bandwidth,2)
             },
+            #经济影响系数
+            "Varea":self.model.params["cost"]["economy_vitality"][self.area_ID-1] / min(self.model.params["cost"]["economy_vitality"]),
 
             "Services": [service.id for service in self.services],
             "Download Queue": len(self.download_queue),
@@ -261,13 +264,24 @@ class CpnNode(EdgeServer):
         return self.services
 
     #获取节点状态
-    def get_State(self)->list:
+    def get_State(self,ori_router=None)->list:
         cpn_state=[]
         metrics = self.collect()
-        cpn_state = [metrics["CPU"],metrics["GPU"],metrics["Disk"],metrics["Bandwidth"],\
-                     metrics["cpu_flops"],metrics["gpu_flops"],\
-                     metrics["resource_ratio"]["cpu"], metrics["resource_ratio"]["gpu"],\
-                     metrics["resource_ratio"]["disk"],metrics["resource_ratio"]["bw"]]
+        distance = 0
+        if ori_router:
+            #计算源节点到目的地的最短路径距离
+            path,delay=self.model.topology._shortest_path(origin=ori_router, target=self)
+            for i in range(len(path) - 1):
+                link = self.model.topology[path[i]][path[i + 1]]
+                distance += link["distance"]
+        cpn_state = [metrics["GPU"],metrics["Disk"],metrics["Bandwidth"],
+                     #资源剩余量
+                     metrics["GPU"]-metrics["GPU Demand"], metrics["Disk"]-metrics["Disk Demand"], metrics["Bandwidth"]-metrics["Bandwidth Demand"],
+                     metrics["gpu_flops"],
+                     metrics["resource_ratio"]["gpu"],metrics["resource_ratio"]["disk"],metrics["resource_ratio"]["bw"],
+                     metrics["Varea"],
+                     distance
+                     ]
         # TODO:考虑归一化
         return cpn_state
 

@@ -63,13 +63,15 @@ class Controller(ComponentManager,Agent):
         for  service in self.schedule_services:
              node = np.random.choice(self.cpn_nodes)
              count = 1
+             # 随机生成带宽等级
+             service.min_bw_demand = np.random.choice([1,2,5])
              while((not node.has_capacity_to_host(service)) and count <= 10):
                  np.random.seed(count)
                  node = np.random.choice(self.cpn_nodes)
                  count+=1
 
              if count>10:
-                 print("No cpn node can host the task!")
+                 # print("No cpn node can host the task!")
                  self.unsuccess_count += 1
              else:
                  target_server = node
@@ -81,6 +83,8 @@ class Controller(ComponentManager,Agent):
     def static_policy(self):
         # 将每个任务分配给位于同一区域内的或距离最近的CPN节点
         for service in self.schedule_services:
+            # 生成静态的带宽等级
+            service.min_bw_demand = 5
             area_ID = service.area_ID
 
             find = False
@@ -110,12 +114,12 @@ class Controller(ComponentManager,Agent):
                     service.provision(target_server)
                 else:self.unsuccess_count += 1
 
-
     ####### TODO：智能策略
     def dynamic_policy(self,node,bw):
         if type(node)==list and type(bw)==list:
             for i in range(len(self.schedule_services)):
                 service = self.schedule_services[i]
+                service.min_bw_demand = bw[i]
                 if node[i].has_capacity_to_host(service):
                     service.bw_demand = bw[i]
                     service.provision(node[i])
@@ -125,6 +129,7 @@ class Controller(ComponentManager,Agent):
         else:
             for i in range(len(self.schedule_services)):
                 service = self.schedule_services[i]
+                service.min_bw_demand = bw
                 #当前决策下是否具有足够的资源可供部署
                 if node.has_capacity_to_host(service):
                     service.bw_demand = bw

@@ -81,9 +81,9 @@
                 "available": true,
                 "model_name": "CpnNode",
                 "cpu": 200,
-                "gpu":250,
-                "disk": 1000,
-                "bandwidth": 100,
+                "gpu":300,
+                "disk": 500,
+                "bandwidth": 120,
                 "cpu_flops":2,
                 "gpu_flops": 2,
                 "pcie_speed": 3e9,
@@ -114,9 +114,9 @@
                 "available": true,
                 "model_name": "CpnNode",
                 "cpu": 160,
-                "gpu":210,
+                "gpu":220,
                 "disk": 500,
-                "bandwidth": 120,
+                "bandwidth": 150,
                 "cpu_flops":2,
                 "gpu_flops":3,
                 "pcie_speed": 2e9,
@@ -147,9 +147,9 @@
                 "available": true,
                 "model_name": "CpnNode",
                 "cpu": 220,
-                "gpu":180,
+                "gpu":200,
                 "disk": 500,
-                "bandwidth": 80,
+                "bandwidth": 200,
                 "cpu_flops":1,
                 "gpu_flops":1,
                 "pcie_speed": 2e9,
@@ -194,7 +194,7 @@
         {
             "attributes": {
                 "id": 1,
-                "delay": 0.5,
+                "delay": 1,
                 "bandwidth": 1000,
                 "bandwidth_demand": 0,
                 "distance": 50,
@@ -222,7 +222,7 @@
         {
           "attributes": {
                 "id": 2,
-                "delay": 0.5,
+                "delay": 1,
                 "bandwidth": 1000,
                 "bandwidth_demand": 0,
                 "distance": 100,
@@ -250,7 +250,7 @@
         {
           "attributes": {
                 "id": 3,
-                "delay": 0.5,
+                "delay": 1,
                 "bandwidth": 1000,
                 "bandwidth_demand": 0,
                 "distance": 120,
@@ -278,7 +278,7 @@
         {
           "attributes": {
                 "id": 4,
-                "delay": 0.5,
+                "delay": 1,
                 "bandwidth": 1000,
                 "bandwidth_demand": 0,
                 "distance": 10,
@@ -306,7 +306,7 @@
         {
           "attributes": {
                 "id": 5,
-                "delay":0.5,
+                "delay":1,
                 "bandwidth": 1000,
                 "bandwidth_demand": 0,
                 "distance": 10,
@@ -334,7 +334,7 @@
         {
           "attributes": {
                 "id": 6,
-                "delay": 0.5,
+                "delay": 1,
                 "bandwidth": 1000,
                 "bandwidth_demand": 0,
                 "distance": 10,
