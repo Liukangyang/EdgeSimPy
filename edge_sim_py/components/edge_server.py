@@ -5,7 +5,7 @@ from edge_sim_py.components.network_flow import NetworkFlow
 from edge_sim_py.components.container_registry import ContainerRegistry
 from edge_sim_py.components.container_image import ContainerImage
 from edge_sim_py.components.container_layer import ContainerLayer
-
+from collections import deque
 # Mesa modules
 from mesa import Agent
 
@@ -89,15 +89,15 @@ class EdgeServer(ComponentManager, Agent):
 
         # Container registries and services hosted by the edge server
         self.container_registries = []
-        self.services = []
+        self.services = []  # 当前服务列表
 
         # Container images and container layers hosted by the edge server
         self.container_images = []
         self.container_layers = []
 
         # Lists that control the layers being pulled to the edge server
-        self.waiting_queue = []
-        self.download_queue = []
+        self.waiting_queue = deque()  # 等待队列(单端队列)
+        self.download_queue = []   #下载队列
 
         # Number of container layers the edge server can download simultaneously (default = 3)
         self.max_concurrent_layer_downloads = 3

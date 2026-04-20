@@ -26,3 +26,9 @@ from .user_access_patterns import *
 
 # Power models
 from .power_models import *
+
+from .controller import Controller
+from .cpn_node import CpnNode
+from .task import Task
+from .myuser import MyUser
+
