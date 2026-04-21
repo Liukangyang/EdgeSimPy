@@ -3,7 +3,7 @@
 from edge_sim_py.component_manager import ComponentManager
 from edge_sim_py.components import *
 from edge_sim_py.activation_schedulers import *
-
+from edge_sim_py.components.flow_scheduling import *
 # Mesa modules
 from mesa import Model, Agent
 

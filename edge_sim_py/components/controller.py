@@ -1,11 +1,11 @@
-import heapq
-
 import numpy as np
 from mesa import Agent
 
-from edge_sim_py import CpnNode
 from edge_sim_py.component_manager import ComponentManager
+from edge_sim_py.components.cpn_node import CpnNode
+from edge_sim_py.task_schedulers import *
 import copy
+
 
 class Controller(ComponentManager,Agent):
     _instances = []
@@ -40,17 +40,22 @@ class Controller(ComponentManager,Agent):
         return dictionary
 
 
-    def step(self,node)->list:
+    def step(self,node=None)->list:
         if len(self.schedule_services)>0:
             self.task_count += len(self.schedule_services) # 累积总任务数量
-            if len(self.cpn_nodes)>0:
-                if self.policy=="random":
-                    self.random_policy()
-                elif self.policy=="dynamic":
+            if self.policy=="dynamic":
                     self.dynamic_policy(node)
-                else: #TODO:实现其他对比策略
+            elif self.policy=="random":
+                    self.random_policy()
+                #TODO:其他静态策略
+            elif self.policy=="EFT":
+                    self.EFT_policy()
+            elif self.policy=="EDA":
+                    self.EDA_policy()
+            elif self.policy=="EES":
+                    self.EES_policy()
+            else:
                     print("Unknown policy: " + self.policy)
-            else: print("No available cpn node available!")
         services = copy.deepcopy(self.schedule_services)
         self.schedule_services = [] #清空调度列表
         return services
@@ -63,7 +68,7 @@ class Controller(ComponentManager,Agent):
              node = np.random.choice(CpnNode.all())
              count = 1
              while((not node.has_capacity_to_host(service)) and count <= 10):
-                 node = np.random.choice(self.cpn_nodes)
+                 node = np.random.choice(CpnNode.all())
                  count+=1
 
              if count>20:
@@ -73,7 +78,7 @@ class Controller(ComponentManager,Agent):
                  target_server = node
                  service.provision(target_server)
 
-    ####### TODO：智能策略
+    #智能策略
     def dynamic_policy(self,node):
         if type(node)==list:
             for i in range(len(self.schedule_services)):
@@ -94,4 +99,20 @@ class Controller(ComponentManager,Agent):
                     service.status = 'end'
                     self.unsuccess_count += 1
 
+    #EFT时延最小
+    def EFT_policy(self):
+        for service in self.schedule_services:
+            target_server = EFT(service,CpnNode.all())
+            service.provision(target_server)
 
+    #EDA时延-能耗乘积最小
+    def EDA_policy(self):
+        for service in self.schedule_services:
+            target_server = EDA(service,CpnNode.all())
+            service.provision(target_server)
+
+    #EES能耗最小
+    def EES_policy(self):
+        for service in self.schedule_services:
+            target_server = EES(service,CpnNode.all())
+            service.provision(target_server)

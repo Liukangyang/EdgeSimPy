@@ -1,6 +1,4 @@
 """ Contains edge-server-related functionality."""
-from pytz.reference import Pacific
-
 from edge_sim_py.components import EdgeServer
 # EdgeSimPy components
 from edge_sim_py.component_manager import ComponentManager
@@ -16,7 +14,6 @@ import networkx as nx
 import typing
 
 import heapq
-
 class CpnNode(EdgeServer):
     """Class that represents an Cpn_node server."""
 
@@ -24,6 +21,7 @@ class CpnNode(EdgeServer):
     # cpn_object_count = 0
 
     def __init__(self,obj_id: int = None,
+        label:str = None,
         coordinates: tuple = None,
         model_name: str = "",
         cpu_cores: int = 0,
@@ -32,8 +30,8 @@ class CpnNode(EdgeServer):
         memory:int = 0,
         bandwidth: int = 0,
         disk: int = 0,
+        Pactive: float = 0,
         Pidle:float = 0,
-        Pactive:float = 0,
         power_model: typing.Callable = None) -> object:
         """Creates an Cpn node object.
 
@@ -71,15 +69,20 @@ class CpnNode(EdgeServer):
 
         #能耗
         self.total_E = 0
-
         #CPU利用率
         self.Ucpu = .0
         #带宽利用率
         self.Ubw = .0
-        #能耗系数
-        self.k = 10**(-27) * self.mips**2
+
         # 执行任务数量
-        self.exec_tasks = 0
+        self.finished_tasks = 0
+
+        self.label = label
+
+        #当前能耗
+        self.current_E = 0
+        #累积总能耗
+        self.total_E = 0
 
 
     def _to_dict(self) -> dict:
@@ -91,6 +94,7 @@ class CpnNode(EdgeServer):
         dictionary = {
             "attributes": {
                 "id": self.id,
+                "label":self.label,
                 "available": self.available,
                 "model_name": self.model_name,
 
@@ -132,6 +136,7 @@ class CpnNode(EdgeServer):
         """
         metrics = {
             "Instance ID": self.id,
+            "label": self.label,
             "Coordinates": self.coordinates,
             "Available": self.available,
 
@@ -149,7 +154,7 @@ class CpnNode(EdgeServer):
             "E":self.total_E,
 
             "Services": [service.id for service in self.services],
-            "exec_tasks": self.exec_tasks,
+            "finish_tasks": self.finished_tasks,
             # "Download Queue": len(self.download_queue),
             "Waiting Queue": len(self.waiting_queue),
             # "Computing Queue":len(self.compute_queue),
@@ -197,36 +202,40 @@ class CpnNode(EdgeServer):
         total_delay = .0
 
         #依次执行当前步内等待队列内的任务，并计算总时延和总传输数据量
-        self.exec_tasks = 0
-        while len(self.waiting_queue) > 0 and total_delay<=1000:
+        while len(self.waiting_queue) > 0 and total_delay<1:
             task = self.waiting_queue[0]
             # 执行任务
-            if total_delay + task.trans_sustain_steps > 1000:  # 先传输
-                task.trans_sustain_steps -= (1000-total_delay)
-                total_trans_data += 1000-total_delay
+            if total_delay + task.trans_sustain_steps > 60:  # 单位分钟/60s
+                task.trans_sustain_steps -= (60-total_delay) # 更新传输时延
+                total_delay = 60
             else: #传输完成
-                self.memory_demand += task.memory_demand
+                if task.trans_sustain_steps != 0:
+                    self.memory_demand += task.memory_demand *1000/1024
+                    total_trans_data += self.memory_demand *1000/1024
                 total_delay += task.trans_sustain_steps
-                total_trans_data+=task.trans_sustain_steps
+                task.trans_sustain_steps = 0
                 #执行计算
-                if total_delay + task.comp_sustain_steps>1000:
-                    task.comp_sustain_steps -= (1000-total_delay)
-                    total_comp_delay += 1000-total_delay
+                if total_delay + task.comp_sustain_steps > 60:
+                    task.comp_sustain_steps -= (60-total_delay)
+                    total_comp_delay += 60-total_delay
+                    total_delay = 60
                 else: # 计算完成，执行完任务出队，并释放ram资源
                     total_delay += task.comp_sustain_steps
-                    task.being_provisioned = False
+                    total_comp_delay += task.comp_sustain_steps
                     task.status = 'finished'
+                    task.step()
                     self.waiting_queue.popleft()
-                    self.memory_demand -= task.memory_demand
-                    self.exec_tasks += 1
-                    total_comp_delay+=task.comp_sustain_steps
+                    self.memory_demand -= task.memory_demand * 1000 / 1024
+                    self.finished_tasks += 1 #完成任务+1
 
         #计算CPU利用率
-        self.Ucpu = total_comp_delay / 1000
-        #TODO:带宽利用率，注意单位
+        self.Ucpu = total_comp_delay / 60
+        #TODO:带宽利用率
         self.Ubw = 1 if total_trans_data >= self.bandwidth else total_trans_data / self.bandwidth
-        #总能耗
-        self.total_E += self.k * total_comp_delay
+        #单次步进内产生的能耗
+        self.current_E = total_comp_delay*(self.Ucpu*self.Pactive+self.Pidle)
+        # 累积总能耗
+        self.total_E += self.current_E
 
     def has_capacity_to_host(self, service: object) -> bool:
         """Checks if the cpn node has enough free resources to host a given service.
@@ -241,7 +250,7 @@ class CpnNode(EdgeServer):
         # additional_disk_demand = self._get_disk_demand_delta(service=service)
 
         # Calculating the edge server's free resources
-        free_memory = self.memory - self.memory_demand
+        free_memory = self.memory - self.memory_demand*1000/1024 #以GB为单位
 
         # Checking if the host would have resources to host the registry and its (additional) layers
         can_host = free_memory >= service.memory_demand
@@ -263,7 +272,8 @@ class CpnNode(EdgeServer):
             metrics['Ucpu'],
             metrics['Ubw'],
             metrics['cpu_frequency'],
-            metrics['MIPS']
+            metrics['Pactive'],
+            metrics['Pidle'],
         ]
         #预估下一个任务的时延
         trans_delay = service.memory_demand / self.bandwidth #与带宽有关
@@ -279,35 +289,36 @@ class CpnNode(EdgeServer):
     @classmethod
     def print_Servers_metric(cls,obj_id:int=0):
             lines = []
-            lines.append( "| ID | CPU | GPU | Disk | BW |                     ratio(%)                     | d_t | c_t | tasks |")
-            lines.append("|----|-----|-----|------|----|--------------------------------------------------|-----|-----|-------|")
+            lines.append( "| ID | CPU | FRE(GHz) | MIPS | Memory(GB) | BW(GB/s) | Pactive(W) | Pidle(W) | tasks |")
+            lines.append("|----|-----|-----|-----|-----|-----|------|----|-------|")
             if obj_id == 0:
                 for server in cls._instances:
                     metrics = server.collect()
                     data_row = (
                         f"|  {metrics['Instance ID']} | "
-                        f"{metrics['CPU']} | "
-                        f"{metrics['GPU']} | "
-                        f"{metrics['Disk']}  | "
-                        f"{metrics['Bandwidth']} | "
-                        f"{metrics["resource_ratio"]} | "
-                        f"{metrics['Download Queue']} | "
-                        f"{metrics['Computing Queue']} | "
-                        f"{(metrics['Download Queue']+metrics['Computing Queue'])} |"
+                        f"{metrics['cpu']} | "
+                        f"{metrics['cpu_frequency']} | "
+                        f"{metrics['MIPS']} | "
+                        f"{metrics['memory']}  | "
+                        f"{metrics['bandwidth']} | "
+                        f"{metrics['Pactive']} | "
+                        f"{metrics['Pidle']} | "
+                        f"{metrics['finish_tasks']} | "
                     )
                     lines.append(data_row)
             else:
                 server = cls.find_by_id(cls,obj_id)
                 metrics = server.collect()
                 data_row = (
-                    f"| {metrics['Instance ID']} | "
-                    f"{metrics['CPU']} | "
-                    f"{metrics['GPU']} | "
-                    f"{metrics['Disk']} | "
-                    f"{metrics['Bandwidth']} | "
-                    f"{metrics["resource_ratio"]} | "
-                    f"{metrics['Download Queue']} | "
-                    f"{metrics['Computing Quque']} |"
+                    f"|  {metrics['Instance ID']} | "
+                    f"{metrics['cpu']} | "
+                    f"{metrics['cpu_frequency']} | "
+                    f"{metrics['MIPS']} | "
+                    f"{metrics['memory']}  | "
+                    f"{metrics['bandwidth']} | "
+                    f"{metrics['Pactive']} | "
+                    f"{metrics['Pidle']} | "
+                    f"{metrics['finish_tasks']} | "
                 )
                 lines.append(data_row)
 

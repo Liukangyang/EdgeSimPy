@@ -14,6 +14,11 @@ from .network_flow import NetworkFlow
 from .application import Application
 from .service import Service
 from .edge_server import EdgeServer
+from .cpn_router import CpnRouter
+from .cpn_node import CpnNode
+from .task import Task
+from .controller import Controller
+from .myuser import MyUser
 
 # Network flow scheduling algorithms
 from .flow_scheduling import *
@@ -26,9 +31,4 @@ from .user_access_patterns import *
 
 # Power models
 from .power_models import *
-
-from .controller import Controller
-from .cpn_node import CpnNode
-from .task import Task
-from .myuser import MyUser
 

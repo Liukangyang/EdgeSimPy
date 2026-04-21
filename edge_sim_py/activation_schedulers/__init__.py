@@ -5,3 +5,4 @@ __version__ = "1.1.0"
 from .default_scheduler import DefaultScheduler
 from .base_scheduler import BaseScheduler
 from .random_scheduler import RandomScheduler
+from .my_scheduler import MyScheduler

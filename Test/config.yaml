@@ -1,0 +1,29 @@
+#参数设置
+#任务参数
+task:
+  length: [0.5,1000] #KMI
+  size: [0.1,2] #KMBytes
+  max_delay: #ms
+    avg: 600
+    d: 5
+    scope: [400,1200]
+
+user:
+  mode: 1
+  task_num: 30
+  #mode: 1
+  #lambda_rate: 3
+
+#服务器参数
+server:
+  label: ["Dell R740","IBM Dx360 M2","FUJTU TX1320 M3","Hewlett DL385 G5","Hewlett ML110 G4"]
+  frequency: [2.7,2.933,3.50,2.3,1.86] #单位Ghz
+  Cores: [56,16,4,8,2]
+  MIPS: [604.8,187.712,56,55.2,14.88] #单位KMIPS
+  RAM: [64,48,8,16,16]  #单位GB
+  Bandwidth: [1.5,1,1,1,0.1]  #单位GB
+  Pactive: [432,475,51,299,117]
+  Pidle: [50,116,9,178,86]
+
+#网络训练参数
+

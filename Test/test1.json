@@ -1,0 +1,902 @@
+{
+  "CpnNode":[
+    {
+            "attributes": {
+                "id": 1,
+                "available": true,
+                "model_name": "CpnNode",
+                "active": true
+            },
+            "relationships": {
+                "services": []
+            }
+        },
+        {
+            "attributes": {
+                "id": 2,
+                "available": true,
+                "model_name": "CpnNode",
+                "active": true
+            },
+            "relationships": {
+                "services": []
+            }
+        },
+        {
+            "attributes": {
+                "id": 3,
+                "available": true,
+                "model_name": "CpnNode",
+                "active": true
+            },
+            "relationships": {
+                "services": []
+            }
+        },
+        {
+            "attributes": {
+                "id": 4,
+                "available": true,
+                "model_name": "CpnNode",
+                "active": true
+            },
+            "relationships": {
+                "services": []
+            }
+        },
+        {
+            "attributes": {
+                "id": 5,
+                "available": true,
+                "model_name": "CpnNode",
+                "active": true
+            },
+            "relationships": {
+                "services": []
+            }
+        },
+        {
+            "attributes": {
+                "id": 6,
+                "available": true,
+                "model_name": "CpnNode",
+                "active": true
+            },
+            "relationships": {
+                "services": []
+            }
+        },
+        {
+            "attributes": {
+                "id": 7,
+                "available": true,
+                "model_name": "CpnNode",
+                "active": true
+            },
+            "relationships": {
+                "services": []
+            }
+        },
+        {
+            "attributes": {
+                "id": 8,
+                "available": true,
+                "model_name": "CpnNode",
+                "active": true
+            },
+            "relationships": {
+                "services": []
+            }
+        },
+        {
+            "attributes": {
+                "id": 9,
+                "available": true,
+                "model_name": "CpnNode",
+                "active": true
+            },
+            "relationships": {
+                "services": []
+            }
+        },
+        {
+            "attributes": {
+                "id": 10,
+                "available": true,
+                "model_name": "CpnNode",
+                "active": true
+            },
+            "relationships": {
+                "services": []
+            }
+        },
+        {
+            "attributes": {
+                "id": 11,
+                "available": true,
+                "model_name": "CpnNode",
+                "active": true
+            },
+            "relationships": {
+                "services": []
+            }
+        },
+        {
+            "attributes": {
+                "id": 12,
+                "available": true,
+                "model_name": "CpnNode",
+                "active": true
+            },
+            "relationships": {
+                "services": []
+            }
+        },
+        {
+            "attributes": {
+                "id": 13,
+                "available": true,
+                "model_name": "CpnNode",
+                "active": true
+            },
+            "relationships": {
+                "services": []
+            }
+        },
+        {
+            "attributes": {
+                "id": 14,
+                "available": true,
+                "model_name": "CpnNode",
+                "active": true
+            },
+            "relationships": {
+                "services": []
+            }
+        },
+        {
+            "attributes": {
+                "id":15,
+                "available": true,
+                "model_name": "CpnNode",
+                "active": true
+            },
+            "relationships": {
+                "services": []
+            }
+        },
+        {
+            "attributes": {
+                "id": 16,
+                "available": true,
+                "model_name": "CpnNode",
+                "active": true
+            },
+            "relationships": {
+                "services": []
+            }
+        },
+        {
+            "attributes": {
+                "id": 17,
+                "available": true,
+                "model_name": "CpnNode",
+                "active": true
+            },
+            "relationships": {
+                "services": []
+            }
+        },
+        {
+            "attributes": {
+                "id": 18,
+                "available": true,
+                "model_name": "CpnNode",
+                "active": true
+            },
+            "relationships": {
+                "services": []
+            }
+        },
+        {
+            "attributes": {
+                "id": 19,
+                "available": true,
+                "model_name": "CpnNode",
+                "active": true
+            },
+            "relationships": {
+                "services": []
+            }
+        },
+        {
+            "attributes": {
+                "id": 20,
+                "available": true,
+                "model_name": "CpnNode",
+                "active": true
+            },
+            "relationships": {
+                "services": []
+            }
+        },
+        {
+            "attributes": {
+                "id": 21,
+                "available": true,
+                "model_name": "CpnNode",
+                "active": true
+            },
+            "relationships": {
+                "services": []
+            }
+        },
+        {
+            "attributes": {
+                "id": 22,
+                "available": true,
+                "model_name": "CpnNode",
+                "active": true
+            },
+            "relationships": {
+                "services": []
+            }
+        },
+        {
+            "attributes": {
+                "id": 23,
+                "available": true,
+                "model_name": "CpnNode",
+                "active": true
+            },
+            "relationships": {
+                "services": []
+            }
+        },
+        {
+            "attributes": {
+                "id": 24,
+                "available": true,
+                "model_name": "CpnNode",
+                "active": true
+            },
+            "relationships": {
+                "services": []
+            }
+        }
+  ],
+  "NetworkSwitch":[
+    {
+      "attributes": {
+        "id": 1,
+        "coordinates": [
+          2,
+          2
+        ],
+        "active": true
+      },
+      "relationships": {
+        "links": []
+      }
+    }
+  ],
+  "CpnRouter":[
+    {
+      "attributes": {
+        "id": 1,
+        "active": true
+      },
+      "relationships": {
+        "links": [],
+        "controller": {
+          "class": "Controller",
+          "id": 1
+        }
+      }
+    }
+  ],
+  "NetworkLink":[
+        {
+            "attributes": {
+                "id": 1,
+                "delay": 0,
+                "active": true
+            },
+            "relationships": {
+                "topology": {
+                    "class": "Topology",
+                    "id": 1
+                },
+                "nodes": [
+                    {
+                        "class": "CpnRouter",
+                        "id": 1
+                    },
+                    {
+                        "class": "NetworkSwitch",
+                        "id": 1
+                    }
+                ]
+            }
+        },
+            {
+            "attributes": {
+                "id": 2,
+                "delay": 1,
+                "active": true
+            },
+            "relationships": {
+                "topology": {
+                    "class": "Topology",
+                    "id": 1
+                },
+                "nodes": [
+                    {
+                        "class": "CpnNode",
+                        "id": 1
+                    },
+                    {
+                        "class": "NetworkSwitch",
+                        "id": 1
+                    }
+                ]
+            }
+        },
+       {
+            "attributes": {
+                "id": 3,
+                "delay": 1,
+                "active": true
+            },
+            "relationships": {
+                "topology": {
+                    "class": "Topology",
+                    "id": 1
+                },
+                "nodes": [
+                    {
+                        "class": "CpnNode",
+                        "id": 2
+                    },
+                    {
+                        "class": "NetworkSwitch",
+                        "id": 1
+                    }
+                ]
+            }
+        },
+    {
+            "attributes": {
+                "id": 4,
+                "delay": 1,
+                "active": true
+            },
+            "relationships": {
+                "topology": {
+                    "class": "Topology",
+                    "id": 1
+                },
+                "nodes": [
+                    {
+                        "class": "CpnNode",
+                        "id": 3
+                    },
+                    {
+                        "class": "NetworkSwitch",
+                        "id": 1
+                    }
+                ]
+            }
+        },
+    {
+            "attributes": {
+                "id": 5,
+                "delay": 1,
+                "active": true
+            },
+            "relationships": {
+                "topology": {
+                    "class": "Topology",
+                    "id": 1
+                },
+                "nodes": [
+                    {
+                        "class": "CpnNode",
+                        "id": 4
+                    },
+                    {
+                        "class": "NetworkSwitch",
+                        "id": 1
+                    }
+                ]
+            }
+        },
+    {
+            "attributes": {
+                "id": 6,
+                "delay": 1,
+                "active": true
+            },
+            "relationships": {
+                "topology": {
+                    "class": "Topology",
+                    "id": 1
+                },
+                "nodes": [
+                    {
+                        "class": "CpnNode",
+                        "id": 5
+                    },
+                    {
+                        "class": "NetworkSwitch",
+                        "id": 1
+                    }
+                ]
+            }
+        },
+    {
+            "attributes": {
+                "id": 7,
+                "delay": 1,
+                "active": true
+            },
+            "relationships": {
+                "topology": {
+                    "class": "Topology",
+                    "id": 1
+                },
+                "nodes": [
+                    {
+                        "class": "CpnNode",
+                        "id": 6
+                    },
+                    {
+                        "class": "NetworkSwitch",
+                        "id": 1
+                    }
+                ]
+            }
+        },
+    {
+            "attributes": {
+                "id": 8,
+                "delay": 1,
+                "active": true
+            },
+            "relationships": {
+                "topology": {
+                    "class": "Topology",
+                    "id": 1
+                },
+                "nodes": [
+                    {
+                        "class": "CpnNode",
+                        "id": 7
+                    },
+                    {
+                        "class": "NetworkSwitch",
+                        "id": 1
+                    }
+                ]
+            }
+        },
+    {
+            "attributes": {
+                "id": 9,
+                "delay": 1,
+                "active": true
+            },
+            "relationships": {
+                "topology": {
+                    "class": "Topology",
+                    "id": 1
+                },
+                "nodes": [
+                    {
+                        "class": "CpnNode",
+                        "id": 8
+                    },
+                    {
+                        "class": "NetworkSwitch",
+                        "id": 1
+                    }
+                ]
+            }
+        },
+    {
+            "attributes": {
+                "id": 10,
+                "delay": 1,
+                "active": true
+            },
+            "relationships": {
+                "topology": {
+                    "class": "Topology",
+                    "id": 1
+                },
+                "nodes": [
+                    {
+                        "class": "CpnNode",
+                        "id": 9
+                    },
+                    {
+                        "class": "NetworkSwitch",
+                        "id": 1
+                    }
+                ]
+            }
+        },
+    {
+            "attributes": {
+                "id": 11,
+                "delay": 1,
+                "active": true
+            },
+            "relationships": {
+                "topology": {
+                    "class": "Topology",
+                    "id": 1
+                },
+                "nodes": [
+                    {
+                        "class": "CpnNode",
+                        "id": 10
+                    },
+                    {
+                        "class": "NetworkSwitch",
+                        "id": 1
+                    }
+                ]
+            }
+        },
+    {
+            "attributes": {
+                "id": 12,
+                "delay": 1,
+                "active": true
+            },
+            "relationships": {
+                "topology": {
+                    "class": "Topology",
+                    "id": 1
+                },
+                "nodes": [
+                    {
+                        "class": "CpnNode",
+                        "id": 11
+                    },
+                    {
+                        "class": "NetworkSwitch",
+                        "id": 1
+                    }
+                ]
+            }
+        },
+    {
+            "attributes": {
+                "id": 13,
+                "delay": 1,
+                "active": true
+            },
+            "relationships": {
+                "topology": {
+                    "class": "Topology",
+                    "id": 1
+                },
+                "nodes": [
+                    {
+                        "class": "CpnNode",
+                        "id": 12
+                    },
+                    {
+                        "class": "NetworkSwitch",
+                        "id": 1
+                    }
+                ]
+            }
+        },
+    {
+            "attributes": {
+                "id": 14,
+                "delay": 1,
+                "active": true
+            },
+            "relationships": {
+                "topology": {
+                    "class": "Topology",
+                    "id": 1
+                },
+                "nodes": [
+                    {
+                        "class": "CpnNode",
+                        "id": 13
+                    },
+                    {
+                        "class": "NetworkSwitch",
+                        "id": 1
+                    }
+                ]
+            }
+        },
+    {
+            "attributes": {
+                "id": 15,
+                "delay": 1,
+                "active": true
+            },
+            "relationships": {
+                "topology": {
+                    "class": "Topology",
+                    "id": 1
+                },
+                "nodes": [
+                    {
+                        "class": "CpnNode",
+                        "id": 14
+                    },
+                    {
+                        "class": "NetworkSwitch",
+                        "id": 1
+                    }
+                ]
+            }
+        },
+    {
+            "attributes": {
+                "id": 16,
+                "delay": 1,
+                "active": true
+            },
+            "relationships": {
+                "topology": {
+                    "class": "Topology",
+                    "id": 1
+                },
+                "nodes": [
+                    {
+                        "class": "CpnNode",
+                        "id": 15
+                    },
+                    {
+                        "class": "NetworkSwitch",
+                        "id": 1
+                    }
+                ]
+            }
+        },
+    {
+            "attributes": {
+                "id": 17,
+                "delay": 1,
+                "active": true
+            },
+            "relationships": {
+                "topology": {
+                    "class": "Topology",
+                    "id": 1
+                },
+                "nodes": [
+                    {
+                        "class": "CpnNode",
+                        "id": 16
+                    },
+                    {
+                        "class": "NetworkSwitch",
+                        "id": 1
+                    }
+                ]
+            }
+        },
+    {
+            "attributes": {
+                "id": 18,
+                "delay": 10,
+                "active": true
+            },
+            "relationships": {
+                "topology": {
+                    "class": "Topology",
+                    "id": 1
+                },
+                "nodes": [
+                    {
+                        "class": "CpnNode",
+                        "id": 17
+                    },
+                    {
+                        "class": "NetworkSwitch",
+                        "id": 1
+                    }
+                ]
+            }
+        },
+    {
+            "attributes": {
+                "id": 19,
+                "delay": 10,
+                "active": true
+            },
+            "relationships": {
+                "topology": {
+                    "class": "Topology",
+                    "id": 1
+                },
+                "nodes": [
+                    {
+                        "class": "CpnNode",
+                        "id": 18
+                    },
+                    {
+                        "class": "NetworkSwitch",
+                        "id": 1
+                    }
+                ]
+            }
+        },
+    {
+            "attributes": {
+                "id": 20,
+                "delay": 10,
+                "active": true
+            },
+            "relationships": {
+                "topology": {
+                    "class": "Topology",
+                    "id": 1
+                },
+                "nodes": [
+                    {
+                        "class": "CpnNode",
+                        "id": 19
+                    },
+                    {
+                        "class": "NetworkSwitch",
+                        "id": 1
+                    }
+                ]
+            }
+        },
+    {
+            "attributes": {
+                "id": 21,
+                "delay": 10,
+                "active": true
+            },
+            "relationships": {
+                "topology": {
+                    "class": "Topology",
+                    "id": 1
+                },
+                "nodes": [
+                    {
+                        "class": "CpnNode",
+                        "id": 20
+                    },
+                    {
+                        "class": "NetworkSwitch",
+                        "id": 1
+                    }
+                ]
+            }
+        },
+    {
+            "attributes": {
+                "id": 22,
+                "delay": 10,
+                "active": true
+            },
+            "relationships": {
+                "topology": {
+                    "class": "Topology",
+                    "id": 1
+                },
+                "nodes": [
+                    {
+                        "class": "CpnNode",
+                        "id": 21
+                    },
+                    {
+                        "class": "NetworkSwitch",
+                        "id": 1
+                    }
+                ]
+            }
+        },
+    {
+            "attributes": {
+                "id": 23,
+                "delay": 10,
+                "active": true
+            },
+            "relationships": {
+                "topology": {
+                    "class": "Topology",
+                    "id": 1
+                },
+                "nodes": [
+                    {
+                        "class": "CpnNode",
+                        "id": 22
+                    },
+                    {
+                        "class": "NetworkSwitch",
+                        "id": 1
+                    }
+                ]
+            }
+        },
+    {
+            "attributes": {
+                "id": 24,
+                "delay": 10,
+                "active": true
+            },
+            "relationships": {
+                "topology": {
+                    "class": "Topology",
+                    "id": 1
+                },
+                "nodes": [
+                    {
+                        "class": "CpnNode",
+                        "id": 23
+                    },
+                    {
+                        "class": "NetworkSwitch",
+                        "id": 1
+                    }
+                ]
+            }
+        },
+    {
+            "attributes": {
+                "id":25,
+                "delay": 10,
+                "active": true
+            },
+            "relationships": {
+                "topology": {
+                    "class": "Topology",
+                    "id": 1
+                },
+                "nodes": [
+                    {
+                        "class": "CpnNode",
+                        "id": 24
+                    },
+                    {
+                        "class": "NetworkSwitch",
+                        "id": 1
+                    }
+                ]
+            }
+        }
+  ],
+  "Controller": [
+    {
+    "attributes": {
+      "id": 1,
+       "policy": "EFT"
+    },
+    "relationships":{
+    }
+
+  }
+  ],
+  "MyUser": [
+    {
+      "attributes": {
+        "id": 1,
+        "generate_mode": 1,
+        "lambda_rate": 15
+      },
+      "relationships":{
+        "router":
+        {
+          "class": "CpnRouter",
+          "id": 1
+        }
+       }
+    }
+  ]
+}

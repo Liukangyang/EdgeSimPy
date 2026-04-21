@@ -1,12 +1,14 @@
 """ Contains service-related functionality."""
 # EdgeSimPy components
+""" Contains service-related functionality."""
+# EdgeSimPy components
 from edge_sim_py.components import Service, NetworkSwitch
 # EdgeSimPy components
 from edge_sim_py.component_manager import ComponentManager
 from edge_sim_py.components.container_image import ContainerImage
 from edge_sim_py.components.container_layer import ContainerLayer
 from edge_sim_py.components.cpn_node import CpnNode
-from edge_sim_py.components import Controller
+from edge_sim_py.components.cpn_router import CpnRouter
 from edge_sim_py.components.network_flow import NetworkFlow
 
 # Mesa modules
@@ -14,7 +16,6 @@ from mesa import Agent
 import math
 # Python libraries
 import networkx as nx
-
 
 class Task( Service):
     Mtu = 1500
@@ -24,11 +25,12 @@ class Task( Service):
         label: str = "",
         demand:dict = {
             "cpu_demand":.0,
-            "memory_deman":.0
+            "memory_demand":.0
         },
         max_delay = .0,
         state: int = 0,
         status:str='init',
+        router:object=None,
         model:object=None)->object:
 
        Service.__init__(self,obj_id=obj_id,label= label,cpu_demand=demand["cpu_demand"],memory_demand=demand["memory_demand"],state=state)
@@ -38,8 +40,11 @@ class Task( Service):
        self.waiting_sustain_steps = 0 #等待时延
        self.delay = .0 # 总时延
        self.E = .0 # 任务能耗
+       self.Ucpu = .0 #对CPU的利用率
        self.max_delay = max_delay #最大容忍时延
        self.status = status
+
+       self.router = router
 
        self.model = model
 
@@ -96,13 +101,11 @@ class Task( Service):
     #状态转移
     def step(self):
         if self.status=='init' and  not self.being_provisioned: # 上传到控制器列表
-                for controller in Controller.all():
-                    controller.schedule_services.append(self)
-                self.status = 'commit'
+                self.router.services.append(self)
+                self.status = 'scheduled'
 
         if self.status == 'finished': #运行结束
             self.status = 'end'
-            self.being_provisioned = False
 
 
     # 任务部署：更新服务器资源并预估时延
@@ -119,20 +122,22 @@ class Task( Service):
         self.server = target_server
 
         # 计算当前预估时延
-        self.path,link_delay = self.model.topology._shortest_path(origin=self.cpn_router,target=target_server,
+        self.path,link_delay = self.model.topology._shortest_path(origin=self.router,target=target_server,
                                                                   weight="delay",method="dijkstra",service=self)
 
         # 传输时延
-        self.trans_sustain_steps = self.memory_demand / target_server.bw + link_delay
+        self.trans_sustain_steps = self.memory_demand*1000/1024 / target_server.bandwidth + link_delay/1000 #以GB为单位
         # 计算时延
-        self.comp_sustain_steps = self.cpu_demand / target_server.mips
-        # 排队时延:服务器等待队列中每个任务的计算时延
+        self.comp_sustain_steps = self.cpu_demand / target_server.mips #以KMI为单位
+        # 排队时延:服务器等待队列中每个任务的计算时延和传输时延
         for task in target_server.waiting_queue:
-            self.waiting_sustain_steps += task.comp_sustain_steps
+            self.waiting_sustain_steps +=  (task.trans_sustain_steps + task.comp_sustain_steps)
         # 任务总时延
         self.delay = self.trans_sustain_steps + self.waiting_sustain_steps + self.comp_sustain_steps
-        # 任务能耗
-        self.E = self.comp_sustain_steps * target_server.k
+        # TODO:修改任务能耗
+        # 任务本身的CPU利用率
+        self.Ucpu = 1 if self.comp_sustain_steps > 1 else self.comp_sustain_steps
+        self.E = self.comp_sustain_steps*(self.Ucpu*target_server.Pactive + target_server.Pidle)
         # 加入到服务器等待队列中
         target_server.waiting_queue.append(self)
 
@@ -155,35 +160,32 @@ class Task( Service):
     def print_Tasks_metric(cls,obj_id:int=0):
         lines = []
         lines.append(
-            "| ID | Area | Server | task_type | sla_level |  max_delay  |  delay |  cost  |     efficiency     |")
-        lines.append("|----|------|--------|-----------|-----------|-------------|--------|--------|--------------------|")
+            "| ID | Server | cpu_demand(MIPS) | memory_demand(MB) |  max_delay(s)  |  delay(s) |  E(J)  |")
+        lines.append("|----|------|------|-----------|-----------|--------|------|")
         if obj_id == 0:
             for task in cls._instances:
                 metrics = task.collect()
                 data_row = (
                     f"|  {metrics['Instance ID']} |  "
-                    f"{metrics['areaID']}   |   "
-                     f"{metrics['Server']}    |     "
-                    f"{metrics['task_type']}     |     "
-                    f"{metrics['sla_level']}     |     "
-                    f"{metrics["max_delay"]}    |  "
+                    f"{metrics['Server']}  | "
+                    f"{metrics['cpu_demand']*1000}  | "
+                    f"{metrics['memory_demand']*1000}  | "
+                    f"{metrics["max_delay"]}  | "
                     f"{metrics["delay"]} |  "
-                    f"{metrics['resource_cost']} |   "
-                    f"{metrics['efficiency']} |"
+                    f"{metrics['E']} |  "
                 )
                 lines.append(data_row)
         else:
             task = cls.find_by_id(cls, obj_id)
             metrics = task.collect()
             data_row = (
-                f"| {metrics['Instance ID']} | "
-                f"{metrics['areaID']} | "
-                f"{metrics['Server']} | "
-                f"{metrics['task_type']}  | "
-                f"{metrics['sla_level']} | "
-                f"{metrics["delay"]} | "
-                f"{metrics['resource_cost']} |"
-                f"{metrics['efficiency']} | "
+                f"|  {metrics['Instance ID']} |  "
+                f"{metrics['Server']}  | "
+                f"{metrics['cpu_demand'] * 1000}  | "
+                f"{metrics['memory_demand'] * 1000}  | "
+                f"{metrics["max_delay"]}  | "
+                f"{metrics["delay"]} |  "
+                f"{metrics['E']} |  "
             )
             lines.append(data_row)
 
