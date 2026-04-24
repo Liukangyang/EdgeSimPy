@@ -7,17 +7,18 @@ import numpy as np
 import random
 
 
-TEST_EPISODES = 100
+TEST_EPISODES = 10
 class SimulationTestCase(unittest.TestCase):
     def testSimulation(self):
         print("test simulation")
         np.random.seed(1)
 
-        #停止标准：步进次数达到指定步数
+        #TODO:停止标准，达到指定数量任务且所有认为均完成
         def Stop_func(self) -> bool:
-           return (self.schedule.steps >= self.max_steps and all(task.status=='end' or task.being_provisioned==False for task in Task.all()))
+           return  all(user.task_count==500 for user in MyUser.all()) and  all(len(node.exec_tasks)==0 for node in CpnNode.all())
 
         params = MySimulator.get_ParamsFromFile(input_file='Test/params.json')
+
         simulator =  MySimulator(
             stopping_criterion=Stop_func,
             scheduler=MyScheduler,
@@ -38,17 +39,18 @@ class SimulationTestCase(unittest.TestCase):
             #测试一次迭代
             while simulator.running:
                 #由用户生成任务并上传到CPNRouter中
+                time_intervals =  0
                 for user in MyUser.all():
-                    user.step()
+                    time_intervals = user.step()
                 #将任务上传到调度器
                 for router in CpnRouter.all():
                     router.step()
+                #所有服务器步进，更新到当前时刻最新状态
+                for node in CpnNode.all():
+                    node.step(time_intervals)
                 # 控制器进行决策
                 for controller in Controller.all():
                     controller.step()
-                # 算力节点执行任务
-                for node in CpnNode.all():
-                    node.step()
                 #步数+1
                 simulator.schedule.steps += 1
                 simulator.running = not simulator.stopping_criterion(simulator)
@@ -60,7 +62,7 @@ class SimulationTestCase(unittest.TestCase):
             #打印单次的结果
             print(f'episode:{i_episode+1} | total_delay:{round(simulator.total_delay,2)}s |'
                   f'total_E:{round(simulator.total_E,2)}J | '
-                  f'success_ratio:{round(simulator.success_ratio,2)}%,')
+                  f'success_ratio:{round(simulator.success_ratio*100,2)}%,')
 
         #迭代结束后计算平均值
         avg_delay = np.mean(episode_total_delay)

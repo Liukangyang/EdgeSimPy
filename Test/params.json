@@ -1,10 +1,10 @@
 {
                 "user":{
-                    "lambda_rate":15,
+                    "lambda_rate":10,
                     "area_nums":3,
                     "user_nums":1
                 },
                 "max_tasks": 30,
                 "max_steps": 50,
-                "policy": "random"
+                "policy": "EDA"
 }

@@ -85,10 +85,9 @@ class MyUser(User):
 
 
     def step(self):
-        #判断是否继续生成任务
-        if self.model.schedule.steps >= self.model.max_steps:
-            return
         #按指定数量任务
+        if self.task_count >= 500 :
+            return 20 #不生成任务，则每隔20s更新环境
         if self.generate_mode == 0:
             num = 10
             for i in range(num):
@@ -98,29 +97,22 @@ class MyUser(User):
                 self.last_task_step = self.model.schedule.steps
                 # 将任务上传到调度器
                 self.task.step()
-                # print(f"generate task at step:{self.model.schedule.steps}")
-        #按照泊松过程生成任务(数量不定)
+        #按照泊松过程生成一个任务:
         elif self.generate_mode == 1:
-            self.last_task_step = 0
-            self.time_intervals = 0
             self.time_intervals = np.random.exponential(scale=1 / self.lambda_rate)
-            self.time_intervals = np.clip(self.time_intervals,0.1,0.5)
-            while self.last_task_step + self.time_intervals <= 1:
-                # lambda_rate>1时time_intervals可能小于1,因此单步时间内可能到达多个任务
-                self.task = self.generate_newTask()
-                self.task_count += 1
-                self.task.step()
-                self.last_task_step += self.time_intervals
-                # 生成下一个时间间隔
-                self.time_intervals = np.random.exponential(scale=1 / self.lambda_rate)
-                self.time_intervals = np.clip(self.time_intervals, 0.1, 0.5)
+            # self.time_intervals = np.clip(self.time_intervals,0.1,0.5)
+            self.task = self.generate_newTask()
+            self.task_count += 1
+            self.last_task_step += self.time_intervals
+            self.task.step()
+        return self.time_intervals
 
 
     def generate_newTask(self)->object:
         #生成并返回任务对象
-        length = [10,1000]
-        memory = [0.1,10]
-        avg = 18   #以s为单位
+        length = [50,100]
+        memory = [0.1,5]
+        avg = 15   #以s为单位
         d = np.sqrt(2) #方差
         scope = [1,30]
 

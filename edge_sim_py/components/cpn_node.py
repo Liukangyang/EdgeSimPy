@@ -12,8 +12,10 @@ from mesa import Agent
 # Python libraries
 import networkx as nx
 import typing
+from collections import deque
 
 import heapq
+
 class CpnNode(EdgeServer):
     """Class that represents an Cpn_node server."""
 
@@ -32,6 +34,7 @@ class CpnNode(EdgeServer):
         disk: int = 0,
         Pactive: float = 0,
         Pidle:float = 0,
+        type:int=0,
         power_model: typing.Callable = None) -> object:
         """Creates an Cpn node object.
 
@@ -53,6 +56,10 @@ class CpnNode(EdgeServer):
         #EdgeServer’s constructor
         EdgeServer.__init__(self,obj_id,coordinates,model_name,cpu_cores,memory,disk,power_model)
 
+        #服务器类型
+        self.type = type
+        #不同的类型不同的核心数量，对应不同的最大任务数量
+        self.max_tasks = self.cpu
         self.cpu_frequency = cpu_frequency
         self.mips = mips
 
@@ -67,12 +74,14 @@ class CpnNode(EdgeServer):
         # compute queue
         self.compute_queue = [] #计算队列
 
-        #能耗
-        self.total_E = 0
         #CPU利用率
         self.Ucpu = .0
         #带宽利用率
         self.Ubw = .0
+        #存储利用率
+        self.Umemory = .0
+        #累积传输数据量
+        self.total_trans_data = .0
 
         # 执行任务数量
         self.finished_tasks = 0
@@ -83,7 +92,13 @@ class CpnNode(EdgeServer):
         self.current_E = 0
         #累积总能耗
         self.total_E = 0
+        #当前运行任务
+        self.exec_tasks=[]
 
+        #每次更新的时间间隔
+        self.time_intervals = 0
+        #总计时间
+        self.total_T = 0
 
     def _to_dict(self) -> dict:
         """Method that overrides the way the object is formatted to JSON."
@@ -147,12 +162,10 @@ class CpnNode(EdgeServer):
             "memory": self.memory,
             "Pactive": self.Pactive,
             "Pidle": self.Pidle,
-            # "cpu_demand": self.cpu_demand,
-            # "disk_demand": self.disk_demand,
-            "Ucpu": self.Ucpu,
-            "Ubw": self.Ubw,
+            "Ucpu":self.Ucpu,
+            "Umemory":self.memory,
+            "Ubw":self.Ubw,
             "E":self.total_E,
-
             "Services": [service.id for service in self.services],
             "finish_tasks": self.finished_tasks,
             # "Download Queue": len(self.download_queue),
@@ -162,80 +175,136 @@ class CpnNode(EdgeServer):
         }
         return metrics
 
-
 ############################
-    def update(self):
-        #1.从download_queue中提取出当前已经传输完成的流量,将对应服务再放入到计算队列中(按照计算时间降序)
-        while(len(self.download_queue)>0):
-            trans_sustain_steps,flow=heapq.heappop(self.download_queue)
-            if trans_sustain_steps<=self.model.schedule.steps:
-                if flow.metadata['type'] == 'service':
-                    service = flow.metadata['object']
-                    service.status = 'computing'
-                    heapq.heappush(self.compute_queue,(self.model.schedule.steps+service.comp_sustain_steps,service))
-            else:#重新插入下载队列中
-                heapq.heappush(self.download_queue,(trans_sustain_steps,flow))
-                break
+    def update(self,T_):
+        if T_<=0:
+            return
+        for task in self.exec_tasks:
+            #先传输
+            if_comp = False
+            total_delay = 0
+            trans_delay = 0
+            if task.remain_trans_delay == 0:
+                if_comp = True
+            elif task.remain_trans_delay <= T_:#同时段内完成传输
+                self.memory_demand += task.remain_memory_demand
+                task.remain_memory_demand = 0
+                total_delay += task.remain_trans_delay
+                task.remain_trans_delay -= T_
+                task.remain_total_delay -= T_
+                if_comp = True
 
-        #2.从compute_queue中提取出已完成计算的任务，并释放相应资源
-        while(len(self.compute_queue)>0):
-             comp_sustain_steps,service = heapq.heappop(self.compute_queue)
-             if comp_sustain_steps <= self.model.schedule.steps:
-                 service.status = 'finished'
-                # clear resources
-                 self.cpu_demand -= service.cpu_demand
-                 self.gpu_demand -= service.gpu_demand
-                 self.disk_demand -= service.disk_demand
-                 self.bw_demand -= service.bw_demand
-                #直接执行结束任务的step
-                 service.step()
-             else:#重新插入计算队列中
-                 heapq.heappush(self.compute_queue,(comp_sustain_steps,service))
-                 break
+            else:#同时段内未完成传输
+                self.memory_demand += self.bandwidth * T_
+                task.remain_memory_demand -= self.bandwidth * T_
+                task.remain_trans_delay -= T_
+                task.remain_total_delay -= T_
+                total_delay = T_
+                if_comp = False
 
-    # 遍历等待队列，依次执行任务，可执行总数限制在1s内，每执行完成一个任务将释放相应的ram资源
-    def step(self):
+            if if_comp:
+                if task.remain_comp_delay <= T_-total_delay: #剩余时间完成计算
+                    trans_delay = task.remain_comp_delay
+                    task.remain_comp_delay = 0
+                    task.remain_total_delay = 0
+                    task.cpu_demand = 0
+                    self.memory_demand -= task.memory_demand
+                else:  #剩余时间未完成计算
+                    trans_delay = T_-total_delay
+                    task.cpu_demand -=  self.mips / self.cpu * T_
+                    task.remain_comp_delay -= T_
+                    task.remain_total_delay -=T_
+            # self.Ucpu += trans_delay / T_
+
+    # 遍历等待队列，超出最大任务数量的剩余任务需要等待，否则直接占用一个核心运行
+    def step(self,T):
         """Method that executes the events involving the object at each time step."""
-        # get services and create networkFlow
-        total_comp_delay=.0
-        total_trans_data=.0
-        total_delay = .0
 
-        #依次执行当前步内等待队列内的任务，并计算总时延和总传输数据量
-        while len(self.waiting_queue) > 0 and total_delay<1:
-            task = self.waiting_queue[0]
-            # 执行任务
-            if total_delay + task.trans_sustain_steps > 60:  # 单位分钟/60s
-                task.trans_sustain_steps -= (60-total_delay) # 更新传输时延
-                total_delay = 60
-            else: #传输完成
-                if task.trans_sustain_steps != 0:
-                    self.memory_demand += task.memory_demand *1000/1024
-                    total_trans_data += self.memory_demand *1000/1024
-                total_delay += task.trans_sustain_steps
-                task.trans_sustain_steps = 0
-                #执行计算
-                if total_delay + task.comp_sustain_steps > 60:
-                    task.comp_sustain_steps -= (60-total_delay)
-                    total_comp_delay += 60-total_delay
-                    total_delay = 60
-                else: # 计算完成，执行完任务出队，并释放ram资源
-                    total_delay += task.comp_sustain_steps
-                    total_comp_delay += task.comp_sustain_steps
-                    task.status = 'finished'
-                    task.step()
-                    self.waiting_queue.popleft()
-                    self.memory_demand -= task.memory_demand * 1000 / 1024
-                    self.finished_tasks += 1 #完成任务+1
+        self.time_intervals = T
+        self.total_T += self.time_intervals
+        total_delay = 0;incre_E=0;self.total_trans_data = 0
+        total_trans_delay = 0
+        intervals = 0
+        #exec按照堆结构排序
+        while total_delay < T and len(self.exec_tasks)>0:
+                task = heapq.heappop(self.exec_tasks) #剩余计算时间最短的任务
+                trans_delay = 0
+                if_comp=False
+                #TODO:先传输，传输完成再进行计算
+                if task.remain_trans_delay == 0 :
+                    if_comp = True
+                elif task.remain_trans_delay <= T-total_delay: # 当前时间间隔内可完成传输任务
+                    #完成传输
+                    total_delay += task.remain_trans_delay
+                    task.remain_total_delay -= task.remain_trans_delay
+                    task.remain_trans_delay = 0
+                    self.memory_demand += task.remain_memory_demand
+                    self.total_trans_data += task.memory_demand
+                    task.remain_memory_demand = 0
+                    if_comp = True
+                else:# 当前时间间隔内未完成传输任务
+                    #更新传输数据量
+                    self.memory_demand += self.bandwidth * (T-total_delay)
+                    task.remain_memory_demand -= self.bandwidth * (T-total_delay)
+                    #更新剩余时间
+                    task.remain_total_delay -= (T-total_delay)
+                    task.remain_trans_delay -= (T-total_delay)
+                    total_delay = T
+                    if_comp = False
 
-        #计算CPU利用率
-        self.Ucpu = total_comp_delay / 60
-        #TODO:带宽利用率
-        self.Ubw = 1 if total_trans_data >= self.bandwidth else total_trans_data / self.bandwidth
-        #单次步进内产生的能耗
-        self.current_E = total_comp_delay*(self.Ucpu*self.Pactive+self.Pidle)
-        # 累积总能耗
-        self.total_E += self.current_E
+                #是否可以继续传输
+                if if_comp:
+                    if task.remain_comp_delay <= T-total_delay:  #当前时间间隔内可完成计算任务
+                        trans_delay = task.remain_comp_delay
+                        total_delay += task.remain_comp_delay
+                        # #TODO:待修改Ucpu
+                        # incre_E += task.remain_comp_delay * (self.Ucpu*self.Pactive+self.Pidle)
+                        task.remain_total_delay = task.remain_comp_delay = 0
+                        task.cpu_demand = 0
+                        total_trans_delay
+                    else: #当前时间间隔内无法完成
+                        trans_delay = T-total_delay
+                        task.cpu_demand -= self.mips/self.cpu * (T-total_delay)
+                        # incre_E = (T-total_delay) * (self.Ucpu*self.Pactive+self.Pidle)
+                        task.remain_total_delay -= (T-total_delay)
+                        task.remain_comp_delay -= (T - total_delay)
+                        total_delay = T
+                #TODO:更新其他任务的剩余时间,包括传输和计算时间
+                self.update(T_=total_delay)
+                # self.Ucpu += (trans_delay / total_delay if total_delay > 0 else 0)
+
+                if task.remain_total_delay == 0:
+                    self.finished_tasks += 1
+                    #释放任务的内存
+                    self.memory_demand -= task.memory_demand
+                    if len(self.waiting_queue)>0:
+                            wait_task = self.waiting_queue[0]
+                            if self.has_capacity_to_host(wait_task):
+                                heapq.heappush(self.exec_tasks, self.waiting_queue.popleft())
+                else:
+                    heapq.heappush(self.exec_tasks,task)
+
+                #TODO:增加能耗
+               #  intervals = total_delay - intervals
+               #  incre_E +=  intervals*(self.Ucpu * self.Pactive+self.Pidle)
+               # #TODO:更新Ucpu
+               #  #1.按照实际占用核心数计算
+               #  num = 0
+               #  for task in self.exec_tasks:
+               #     if task.remain_total_delay > 0:
+               #         num+=1
+               #  self.Ucpu = num / self.cpu
+        #TODO:时间间隔模拟结束，更新CPU、存储利用率、带宽利用率
+        self.Umemory = 0
+        # for task in self.exec_tasks:
+        #     self.Ucpu += (1 if task.cpu_demand > (self.mips / self.cpu) else task.cpu_demand / (self.mips / self.cpu))
+        # # 取平均
+        # self.Ucpu /= self.cpu
+        self.Umemory = self.memory_demand / self.memory
+
+        self.Ubw = self.total_trans_data / (self.bandwidth * self.total_T) #total_trans_data和bandwidth均以GB为单位
+        # #更新总能耗
+        # self.total_E += incre_E
 
     def has_capacity_to_host(self, service: object) -> bool:
         """Checks if the cpn node has enough free resources to host a given service.
@@ -250,10 +319,10 @@ class CpnNode(EdgeServer):
         # additional_disk_demand = self._get_disk_demand_delta(service=service)
 
         # Calculating the edge server's free resources
-        free_memory = self.memory - self.memory_demand*1000/1024 #以GB为单位
+        free_memory = self.memory - self.memory_demand #以GB为单位
 
         # Checking if the host would have resources to host the registry and its (additional) layers
-        can_host = free_memory >= service.memory_demand
+        can_host = free_memory >= service.remain_memory_demand
 
         return can_host
 
@@ -270,12 +339,13 @@ class CpnNode(EdgeServer):
             metrics['memory'],
             metrics['bandwidth'],
             metrics['Ucpu'],
+            metrics['Umemory'],
             metrics['Ubw'],
-            metrics['cpu_frequency'],
+            metrics['MIPS'],
             metrics['Pactive'],
             metrics['Pidle'],
         ]
-        #预估下一个任务的时延
+        # 预估下一个任务的时延
         trans_delay = service.memory_demand / self.bandwidth #与带宽有关
         compute_delay = service.cpu_demand / self.mips  #与性能有关
         waiting_delay = sum([task.comp_sustain_steps for task in self.waiting_queue])  #与等待队列长度有关

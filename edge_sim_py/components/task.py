@@ -1,4 +1,6 @@
 """ Contains service-related functionality."""
+
+
 # EdgeSimPy components
 """ Contains service-related functionality."""
 # EdgeSimPy components
@@ -10,7 +12,8 @@ from edge_sim_py.components.container_layer import ContainerLayer
 from edge_sim_py.components.cpn_node import CpnNode
 from edge_sim_py.components.cpn_router import CpnRouter
 from edge_sim_py.components.network_flow import NetworkFlow
-
+import heapq
+from edge_sim_py.task_schedulers import Waiting_Time
 # Mesa modules
 from mesa import Agent
 import math
@@ -35,13 +38,17 @@ class Task( Service):
 
        Service.__init__(self,obj_id=obj_id,label= label,cpu_demand=demand["cpu_demand"],memory_demand=demand["memory_demand"],state=state)
 
+       self.total_cpu_demand = self.cpu_demand
        self.trans_sustain_steps = 0 #传输时延
        self.comp_sustain_steps = 0 #计算时延
        self.waiting_sustain_steps = 0 #等待时延
        self.delay = .0 # 总时延
-       self.E = .0 # 任务能耗
-       self.Ucpu = .0 #对CPU的利用率
+       self.E = .0 # 任务预估能耗
        self.max_delay = max_delay #最大容忍时延
+       self.remain_total_delay = 0 #剩余时长
+       self.remain_comp_delay = 0 #剩余计算时间
+       self.remain_trans_delay = 0 #剩余传输时间
+       self.remain_memory_demand = self.memory_demand
        self.status = status
 
        self.router = router
@@ -106,6 +113,8 @@ class Task( Service):
 
         if self.status == 'finished': #运行结束
             self.status = 'end'
+            self.cpu_demand = 0
+            self.memory_demand = 0
 
 
     # 任务部署：更新服务器资源并预估时延
@@ -126,20 +135,26 @@ class Task( Service):
                                                                   weight="delay",method="dijkstra",service=self)
 
         # 传输时延
-        self.trans_sustain_steps = self.memory_demand*1000/1024 / target_server.bandwidth + link_delay/1000 #以GB为单位
+        self.trans_sustain_steps = self.memory_demand / target_server.bandwidth + link_delay #以GB为单位
         # 计算时延
-        self.comp_sustain_steps = self.cpu_demand / target_server.mips #以KMI为单位
-        # 排队时延:服务器等待队列中每个任务的计算时延和传输时延
-        for task in target_server.waiting_queue:
-            self.waiting_sustain_steps +=  (task.trans_sustain_steps + task.comp_sustain_steps)
+        self.comp_sustain_steps = self.cpu_demand / (target_server.mips/target_server.cpu) #以KMI为单位
+        self.remain_comp_delay = self.comp_sustain_steps
+        self.remain_trans_delay = self.trans_sustain_steps
+        self.remain_total_delay = self.remain_trans_delay + self.remain_comp_delay
+        # TODO：排队时延需要按照并行处理的思路计算
+        self.waiting_sustain_steps = Waiting_Time(self,target_server)
         # 任务总时延
         self.delay = self.trans_sustain_steps + self.waiting_sustain_steps + self.comp_sustain_steps
-        # TODO:修改任务能耗
-        # 任务本身的CPU利用率
-        self.Ucpu = 1 if self.comp_sustain_steps > 1 else self.comp_sustain_steps
-        self.E = self.comp_sustain_steps*(self.Ucpu*target_server.Pactive + target_server.Pidle)
-        # 加入到服务器等待队列中
-        target_server.waiting_queue.append(self)
+
+        # Ucpu =  1 if self.cpu_demand /  (target_server.mips/target_server.cpu) >1 else self.cpu_demand /  (target_server.mips/target_server.cpu)
+
+        #预估能耗
+        self.E = self.comp_sustain_steps * (target_server.Pactive / target_server.cpu)
+        # TODO:判断是否能直接执行
+        if len(target_server.exec_tasks) >= target_server.max_tasks:
+            target_server.waiting_queue.append(self)
+        else:
+            heapq.heappush(target_server.exec_tasks,self)
 
         self.being_provisioned = True
 
@@ -153,7 +168,8 @@ class Task( Service):
         return task_state
 
     def __lt__(self,other):
-        return self.id < other.id
+        return   self.remain_total_delay<other.remain_total_delay if self.remain_total_delay != other.remain_total_delay \
+                  else self.id<other.id
 
     #统计打印函数
     @classmethod

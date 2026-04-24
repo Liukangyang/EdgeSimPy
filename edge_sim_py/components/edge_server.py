@@ -67,7 +67,7 @@ class EdgeServer(ComponentManager, Agent):
         self.coordinates = coordinates
 
         # Edge server capacity
-        self.cpu = cpu
+        self.cpu = cpu #核心数
         self.memory = memory
         self.disk = disk
 

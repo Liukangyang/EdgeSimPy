@@ -103,16 +103,24 @@ class Controller(ComponentManager,Agent):
     def EFT_policy(self):
         for service in self.schedule_services:
             target_server = EFT(service,CpnNode.all())
-            service.provision(target_server)
+            if target_server is not None:
+                service.provision(target_server)
+            else: self.unsuccess_count += 1
 
     #EDA时延-能耗乘积最小
     def EDA_policy(self):
         for service in self.schedule_services:
             target_server = EDA(service,CpnNode.all())
-            service.provision(target_server)
+            if target_server is not None:
+                service.provision(target_server)
+            else:
+                self.unsuccess_count += 1
 
     #EES能耗最小
     def EES_policy(self):
         for service in self.schedule_services:
             target_server = EES(service,CpnNode.all())
-            service.provision(target_server)
+            if target_server is not None:
+                service.provision(target_server)
+            else:
+                self.unsuccess_count += 1

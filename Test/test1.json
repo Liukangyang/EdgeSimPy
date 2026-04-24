@@ -690,7 +690,7 @@
     {
             "attributes": {
                 "id": 18,
-                "delay": 10,
+                "delay": 5,
                 "active": true
             },
             "relationships": {
@@ -713,7 +713,7 @@
     {
             "attributes": {
                 "id": 19,
-                "delay": 10,
+                "delay": 5,
                 "active": true
             },
             "relationships": {
@@ -736,7 +736,7 @@
     {
             "attributes": {
                 "id": 20,
-                "delay": 10,
+                "delay": 5,
                 "active": true
             },
             "relationships": {
@@ -759,7 +759,7 @@
     {
             "attributes": {
                 "id": 21,
-                "delay": 10,
+                "delay": 5,
                 "active": true
             },
             "relationships": {
@@ -782,7 +782,7 @@
     {
             "attributes": {
                 "id": 22,
-                "delay": 10,
+                "delay": 5,
                 "active": true
             },
             "relationships": {
@@ -805,7 +805,7 @@
     {
             "attributes": {
                 "id": 23,
-                "delay": 10,
+                "delay": 5,
                 "active": true
             },
             "relationships": {
@@ -828,7 +828,7 @@
     {
             "attributes": {
                 "id": 24,
-                "delay": 10,
+                "delay": 5,
                 "active": true
             },
             "relationships": {
@@ -851,7 +851,7 @@
     {
             "attributes": {
                 "id":25,
-                "delay": 10,
+                "delay": 5,
                 "active": true
             },
             "relationships": {

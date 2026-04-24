@@ -99,11 +99,11 @@ class MySimulator(Simulator):
         # for line in lines:
         #     print(line)
         #
-        # # --- Servers 部分 ---
+        # --- Servers 部分 ---
         # print("Cpn-Nodes:")
         # CpnNode.print_Servers_metric()
-
-        # --- 累积任务数 ---
+        #
+        # # --- 累积任务数 ---
         # MyScheduler.statistics()
 
         # --- Task部分 ---
@@ -113,12 +113,13 @@ class MySimulator(Simulator):
         # ----指标统计-----
         # 计算所有任务累积总时延
         self.total_delay = 0
+        self.total_E = 0
         for task in Task.all():
             self.total_delay += task.delay
-        #计算系统累计能耗
-        self.total_E = 0
-        for node in CpnNode.all():
-            self.total_E += node.total_E
+            self.total_E += task.E
+        # # #计算系统累计能耗
+        # for node in CpnNode.all():
+        #     self.total_E += node.total_E
 
         # print(f"Total delay(s): {self.total_delay}")
         # print(f"Avg delay(s): {self.total_delay/(MyScheduler.total_count-MyScheduler.unsuccess_count)}")
@@ -153,12 +154,13 @@ class MySimulator(Simulator):
     def initialize_Servers(self):
         label=["Dell R740", "IBM Dx360 M2", "FUJTU TX1320 M3", "Hewlett DL385 G5", "Hewlett ML110 G4"]
         frequency=[2.7, 2.933, 3.50, 2.3, 1.86]  # 单位Ghz
-        Cores=[56, 16, 4, 8, 2]
+        Cores=[16, 16, 4, 8, 2]
         MIPS=[604.8, 187.712, 56, 55.2, 14.88]  # 单位KMIPS
         RAM=[64, 48, 8, 16, 16]  # 单位GB
         Bandwidth=[1.5, 1, 1, 1, 0.1]  # 单位GB
-        Pactive=[432, 475, 51, 299, 117]
+        Pactive=[12.4, 47.5, 5.1, 29.9, 11.7]
         Pidle=[50, 116, 9, 178, 86]
+        type = [1, 2, 3, 4, 5]
         index=None
         for i in range(1,len(CpnNode.all())+1):
             if i<=16: #边缘服务器
@@ -167,7 +169,9 @@ class MySimulator(Simulator):
                 index = np.random.choice([0,1])
 
             CpnNode.all()[i-1].label  = label[index]
+            CpnNode.all()[i - 1].type = type[index]
             CpnNode.all()[i-1].cpu = Cores[index]
+            CpnNode.all()[i-1].max_tasks = Cores[index]
             CpnNode.all()[i-1].cpu_frequency = frequency[index]
             CpnNode.all()[i-1].mips = MIPS[index]
             CpnNode.all()[i-1].memory = RAM[index]
@@ -179,17 +183,23 @@ class MySimulator(Simulator):
     def reset(self):
         for node in CpnNode.all():
             node.waiting_queue = deque()
+            node.exec_tasks = []
             #资源占用量
             node.cpu_demand = 0
             node.memory_demand = 0
             node.total_E = 0
+            node.current_E = 0
             node.Ucpu = 0
             node.Ubw = 0
+            node.Umemory =0
 
         #清空用户
         # MyUser._instances = []
         # MyUser._object_count = 0
         # self.users = []
+        for user in MyUser.all():
+            user.task_count = 0
+            user.last_task_step = user.time_intervals = 0
 
         #清空任务
         Task._instances = []

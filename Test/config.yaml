@@ -17,6 +17,7 @@ user:
 #服务器参数
 server:
   label: ["Dell R740","IBM Dx360 M2","FUJTU TX1320 M3","Hewlett DL385 G5","Hewlett ML110 G4"]
+  type: [1,2,3,4,5]
   frequency: [2.7,2.933,3.50,2.3,1.86] #单位Ghz
   Cores: [56,16,4,8,2]
   MIPS: [604.8,187.712,56,55.2,14.88] #单位KMIPS
