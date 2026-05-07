@@ -3,7 +3,7 @@
 '''
 import numpy as np
 import scipy.signal
-
+import torch
 #滑动平均滤波
 def moving_average(a, window_size):
     cumulative_sum = np.cumsum(np.insert(a, 0, 0))
@@ -18,3 +18,18 @@ def moving_average(a, window_size):
 def SG_Filter(a,window_size,n):
     a = scipy.signal.savgol_filter(a,window_size,n)
     return a
+
+
+
+#优势函数计算
+def compute_advantage(gamma, lmbda, td_delta):
+    # if lmbda == 0:
+    #     return td_delta
+    td_delta = td_delta.detach().numpy()
+    advantage_list = []
+    advantage = 0.0
+    for delta in td_delta[::-1]:
+        advantage = gamma * lmbda * advantage + delta
+        advantage_list.append(advantage)
+    advantage_list.reverse()
+    return torch.tensor(advantage_list, dtype=torch.float)

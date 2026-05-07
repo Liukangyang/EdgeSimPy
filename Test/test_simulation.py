@@ -163,7 +163,7 @@ class SimulationTestCase(unittest.TestCase):
         simulator =  MySimulator(
             stopping_criterion=Stop_func, scheduler=MyScheduler
         )
-        simulator.initialize(input_file="D:\\学习文档资料\\edgesimpy\\论文仿真\\Test\\test1.json")
+        simulator.initialize(input_file="Test\\test1.json")
 
         simulator.run_model()
 

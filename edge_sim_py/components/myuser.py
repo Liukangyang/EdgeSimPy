@@ -35,7 +35,7 @@ class MyUser(User):
         # 产生任务
         self.task = None
         # 任务类型
-        self.task_type = None
+        # self.task_type = None
         # 服务SLA等级
         self.sla_level = None
         # 累积生成任务数量
@@ -47,7 +47,6 @@ class MyUser(User):
         self.last_task_step = 0
         # 预期生成任务的时间间隔
         self.time_intervals = 0
-
         self.model = model
 
     def _to_dict(self) -> dict:
@@ -83,31 +82,14 @@ class MyUser(User):
 
 
     def step(self):
-        # 初始就生成任务
-        if self.lambda_rate == 0: #每一步生成一个任务
-            # 生成新任务
+        #按照泊松过程生成一个任务:
+            self.time_intervals = np.random.exponential(scale=1 / self.lambda_rate)
+            # self.time_intervals = np.clip(self.time_intervals,0.1,0.5)
             self.task = self.generate_newTask()
             self.task_count += 1
-            # 更新last_task_step并生成新的时间间隔
-            self.last_task_step = self.model.schedule.steps
-            # 将任务上传到区域内的CPN路由器缓存队列上
+            self.last_task_step += self.time_intervals
             self.task.step()
-            # print(f"generate task at step:{self.model.schedule.steps}")
-        #按照指定时间生成任务
-        else:
-            #1.初始先生成随机时间间隔
-            if self.last_task_step == 0 and self.time_intervals <= 0:
-                self.time_intervals = np.random.exponential(scale=1/self.lambda_rate)
-            #2.判断是否已经到达生成新任务的时间步
-            if self.model.schedule.steps - self.last_task_step >= round(self.time_intervals):
-                # 生成新任务
-                self.task = self.generate_newTask()
-                self.task_count += 1
-                # 更新last_task_step并生成新的时间间隔
-                self.last_task_step = self.model.schedule.steps
-                self.time_intervals = np.random.exponential(scale=1/self.lambda_rate)
-                # 将任务上传到区域内的CPN路由器缓存队列上
-                self.task.step()
+            return self.time_intervals
 
 
 
@@ -133,29 +115,12 @@ class MyUser(User):
             "max_delay":round(np.random.rand()*(sla_list["max_delay"][sla_level-1][1]-sla_list["max_delay"][sla_level-1][0])
                                    +sla_list["max_delay"][sla_level-1][0],1),
 
-            "price_gamma": 1
+            "price_gamma": 1  #价格敏感系数
         }
 
         area_ID = self.area_ID
 
-        # demand={
-        #      "cpu_flops":round(np.random.rand()*(task_list["cpu_flops"][task_type-1][1]-task_list["cpu_flops"][task_type-1][0])
-        #                            +task_list["cpu_flops"][task_type-1][0]),
-        #     "gpu_flops":90,
-        #      "cpu":np.random.randint(low = task_list["cpu"][task_type-1][0],high = task_list["cpu"][task_type-1][1]+1),
-        #     "gpu":8,
-        #     "disk":35
-        # }
-        #
-        # sla ={
-        #     "min_bw":5, #带宽需求固定为5GB
-        #     "max_delay":28,
-        #     "price_gamma": 1
-        # }
-        #
-        # area_ID = 1
         task = Task(area_ID=area_ID,status='init',demand=demand,sla=sla,task_type=task_type,sla_level=sla_level,model=self.model)
-        self.task_type = task_type
         self.sla_level = sla_level
 
         return task

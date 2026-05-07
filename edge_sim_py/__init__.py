@@ -17,3 +17,5 @@ from .dataset_generator import *
 from edge_sim_py.environment.cpn_environment import CpnEnvironment
 
 from .config import *
+
+from .argumentParse import parse_Args

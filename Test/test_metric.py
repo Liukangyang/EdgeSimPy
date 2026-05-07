@@ -29,7 +29,7 @@ TAU_CUSTOM = 0.05  # 用于软更新的 Tau（备用，这里不使用）
 LR_CUSTOM = 1e-2  # 学习率
 TARGET_UPDATE_FREQ_CUSTOM = 50 # 目标网络更新频率
 NUM_EPISODES_CUSTOM = 500  # 训练迭代次数
-TEST_EPISODES_CUSTOM = 100  # 测试迭代次数
+TEST_EPISODES_CUSTOM = 50  # 测试迭代次数
 MAX_STEPS_PER_EPISODE_CUSTOM = 30  # 每次迭代的最大步数
 
 
@@ -81,7 +81,7 @@ class MetricTestCase(unittest.TestCase):
         n_actions_custom = Cpn_env.action_dim
 
         # 初始化策略网络（主Q网络）和目标网络
-        network_mode = 'dqn'
+        network_mode = 'ddqn'
         if network_mode == 'dqn':
             model = DQN(n_actions=n_actions_custom, n_features=n_observations_custom, n_hidden=HIDDEN_SIZE,
                             batch_size=BATCH_SIZE_CUSTOM,
@@ -99,7 +99,7 @@ class MetricTestCase(unittest.TestCase):
             return
         print(f"network mode:{network_mode}")
         # 导入训练好的参数
-        model.load_model("Test/model_file/dqn/cpn_dqn_params_100_4.pth")
+        model.load_model("Test/model_file/ddqn/cpn_ddqn_params_100_4.pth")
         print("load model params!")
 
         print("test start")
@@ -164,17 +164,17 @@ class MetricTestCase(unittest.TestCase):
         print(f"avg_success:{np.mean(episode_success_custom)}")
 
         # 保存数据
-        print("save result")
-        with open("Test/result/dqn/reward.pkl", 'wb') as f:
-            pickle.dump(episode_rewards_custom, f)
-        with open("Test/result/dqn/delay.pkl", 'wb') as f:
-            pickle.dump(episode_delay_custom, f)
-        with open("Test/result/dqn/cost.pkl", 'wb') as f:
-            pickle.dump(episode_cost_custom, f)
-        with open("Test/result/dqn/jain.pkl", 'wb') as f:
-            pickle.dump(episode_jain_custom, f)
-        with open("Test/result/dqn/success.pkl", 'wb') as f:
-            pickle.dump(episode_success_custom, f)
+        # print("save result")
+        # with open("Test/result/dqn/reward.pkl", 'wb') as f:
+        #     pickle.dump(episode_rewards_custom, f)
+        # with open("Test/result/dqn/delay.pkl", 'wb') as f:
+        #     pickle.dump(episode_delay_custom, f)
+        # with open("Test/result/dqn/cost.pkl", 'wb') as f:
+        #     pickle.dump(episode_cost_custom, f)
+        # with open("Test/result/dqn/jain.pkl", 'wb') as f:
+        #     pickle.dump(episode_jain_custom, f)
+        # with open("Test/result/dqn/success.pkl", 'wb') as f:
+        #     pickle.dump(episode_success_custom, f)
         # # 作图
         # plt.figure(1)
         # plt.plot(range(1, len(episode_rewards_custom) + 1), episode_rewards_custom)
@@ -210,7 +210,7 @@ class MetricTestCase(unittest.TestCase):
         episode_cost_custom = []  # 单次迭代的总成本
         episode_jain_custom = []  # 单次迭代的负载均衡总和
         episode_success_custom = [] # 单次迭代的满足时延要求的任务比例
-        policy = "random"
+        policy = "static"
         params = MySimulator.get_ParamsFromFile(input_file='Test/params.json')
 
         def Stop_func() -> bool:
@@ -267,15 +267,15 @@ class MetricTestCase(unittest.TestCase):
         print(f"avg_success:{np.mean(episode_success_custom)}")
 
         # 保存数据
-        print("save result")
-        with open("Test/result/"+policy+"/delay.pkl", 'wb') as f:
-            pickle.dump(episode_delay_custom, f)
-        with open("Test/result/"+policy+"/cost.pkl", 'wb') as f:
-            pickle.dump(episode_cost_custom, f)
-        with open("Test/result/"+policy+"/jain.pkl", 'wb') as f:
-            pickle.dump(episode_jain_custom, f)
-        with open("Test/result/"+policy+"/success.pkl", 'wb') as f:
-            pickle.dump(episode_success_custom, f)
+        # print("save result")
+        # with open("Test/result/"+policy+"/delay.pkl", 'wb') as f:
+        #     pickle.dump(episode_delay_custom, f)
+        # with open("Test/result/"+policy+"/cost.pkl", 'wb') as f:
+        #     pickle.dump(episode_cost_custom, f)
+        # with open("Test/result/"+policy+"/jain.pkl", 'wb') as f:
+        #     pickle.dump(episode_jain_custom, f)
+        # with open("Test/result/"+policy+"/success.pkl", 'wb') as f:
+        #     pickle.dump(episode_success_custom, f)
 
         # #作图
         # plt.figure(1)

@@ -8,12 +8,13 @@ from edge_sim_py.components.container_layer import ContainerLayer
 from edge_sim_py.components.cpn_node import CpnNode
 from edge_sim_py.components.cpn_router import CpnRouter
 from edge_sim_py.components.network_flow import NetworkFlow
-
-# Mesa modules
+from edge_sim_py.task_schedulers import Waiting_Time
+import heapq
 from mesa import Agent
 import math
 # Python libraries
 import networkx as nx
+
 
 
 class Task( Service):
@@ -55,8 +56,14 @@ class Task( Service):
 
        self.trans_sustain_steps = 0 #传输时延
        self.comp_sustain_steps = 0 #计算时延
+       self.waiting_sustain_steps = 0 #等待时延
        self.resource_cost = .0 #资源花费成本
-       self.efficiency = .0 # 任务效用
+       self.delay = .0 # 总时延
+
+       self.remain_total_delay = 0  # 剩余时长
+       self.remain_comp_delay = 0  # 剩余计算时间
+       self.remain_trans_delay = 0  # 剩余传输时间
+       self.remain_memory_demand = self.memory_demand
 
        self.status = status
 
@@ -96,7 +103,6 @@ class Task( Service):
 
                 "delay": self.trans_sustain_steps + self.comp_sustain_steps,
                 "resource_cost": self.resource_cost,
-                "efficiency":self.efficiency,
             },
             "relationships": {
                 "cpn_router": {"class":type(self.cpn_router),"id":self.cpn_router.id} if self.cpn_router else None, #src node
@@ -136,7 +142,6 @@ class Task( Service):
 
             "delay":round(self.trans_sustain_steps+self.comp_sustain_steps,2),
             "resource_cost":round(self.resource_cost,2),
-            "efficiency": self.efficiency,
         }
         return metrics
 
@@ -156,10 +161,6 @@ class Task( Service):
 
         if self.status == 'finished':
             self.status = 'end'
-            # info = self._to_dict()
-            # print("task "+str(info["attributes"]['id']) +" has been finished!")
-            # print(info)
-            self.being_provisioned = False
             self._available = False
 
 
@@ -186,21 +187,19 @@ class Task( Service):
         self.path,link_delay = self.model.topology._shortest_path(origin=self.cpn_router,target=target_server,
                                                                   weight="delay",method="dijkstra",service=self)
         #4. compute delay
-        # pcie_time = self.disk_demand / target_server.pcie_speed
-        # cpu_time = self.flops_demand['cpu'] / (self.cpu_demand * target_server.cpu_flops)
-        gpu_time = self.flops_demand['gpu'] / (self.gpu_demand * target_server.gpu_flops)
-        # TODO:self.comp_sustain_steps =  pcie_time + max(cpu_time,gpu_time)-先忽略IO时延
-        # self.comp_sustain_steps = max(cpu_time, gpu_time)
-        self.comp_sustain_steps = gpu_time
-        #TODO:self.trans_sustain_steps = self.disk_demand / self.bw_demand + (len(self.path)-2) * (self.__class__.Mtu/self.bw_demand + Thop) + link_delay
+        cpu_time = self.flops_demand['cpu'] / (self.cpu_demand * target_server.cpu_flops)
+        # gpu_time = self.flops_demand['gpu'] / (self.gpu_demand * target_server.gpu_flops)
+        self.comp_sustain_steps = cpu_time
+        self.remain_trans_delay = self.comp_sustain_steps
         #link_delay包括了每跳转发排毒时延
         self.trans_sustain_steps = self.disk_demand / self.bw_demand + \
                                    (len(self.path)-2) * (self.__class__.Mtu/(self.bw_demand*1e9)) + \
                                    link_delay
+        self.remain_trans_delay = self.trans_sustain_steps
+        self.waiting_sustain_steps = Waiting_Time(self,target_server)
+        self.delay = self.waiting_sustain_steps + self.trans_sustain_steps +  self.comp_sustain_steps
 
-        total_time = self.trans_sustain_steps + self.comp_sustain_steps
-
-        #TODO:修改带宽成本的计价:跨域距离每增加100KM，价格增加10%
+        #TODO:带宽成本:跨域距离每增加100KM，价格增加10%
         #带宽总成本(1s为单位)
         bw_price = self.model.params["cost"]["Pb"][str(self.bw_demand)] / 3600 * self.trans_sustain_steps
         # 跨域则按照距离增加基础价格
@@ -221,10 +220,10 @@ class Task( Service):
         cpu_price = cpu_base + Ccpu*self.cpu_demand*((target_server.cpu_flops-cpu_fbase)/cpu_fbase)
 
         #gpu成本
-        gpu_base = self.model.params["cost"]["gpu"]["base_price"]
-        Cgpu = self.model.params["cost"]["gpu"]["C"]
-        gpu_fbase = self.model.params["cost"]["gpu"]["fbase"]
-        gpu_price = gpu_base + Cgpu*self.gpu_demand*((target_server.gpu_flops-gpu_fbase)/gpu_fbase)
+        # gpu_base = self.model.params["cost"]["gpu"]["base_price"]
+        # Cgpu = self.model.params["cost"]["gpu"]["C"]
+        # gpu_fbase = self.model.params["cost"]["gpu"]["fbase"]
+        # gpu_price = gpu_base + Cgpu*self.gpu_demand*((target_server.gpu_flops-gpu_fbase)/gpu_fbase)
 
         # 服务器电力成本
         Gbase = min(self.model.params["cost"]["economy_vitality"])
@@ -232,21 +231,24 @@ class Task( Service):
         Vloc = Garea / Gbase
         #计算资源成本 (单位时间计算成本*计算时间)
         # compute_price =  ((cpu_price + gpu_price) * Vloc) * self.comp_sustain_steps
-        compute_price = gpu_price * Vloc * self.comp_sustain_steps
+        compute_price = cpu_price * Vloc * self.comp_sustain_steps
 
         #总资源成本
         self.resource_cost = bw_price + compute_price
 
-        self.efficiency = total_time + self.price_gamma * self.resource_cost
-
+        # TODO:判断是否能直接执行
+        if len(target_server.exec_tasks) >= target_server.max_tasks:
+            target_server.waiting_queue.append(self)
+        else:
+            heapq.heappush(target_server.exec_tasks,self)
         self.being_provisioned = True
 
-    #获取任务状态
+    #TODO:获取任务状态
     def get_State(self)->list:
         task_state = []
         metrics = self.collect()
-        task_state=[metrics["flops_demand"]["gpu"],\
-                    metrics["gpu_demand"],metrics["disk_demand"],\
+        task_state=[metrics["flops_demand"]["cpu"],\
+                    metrics["cpu_demand"],metrics["disk_demand"],\
                     metrics["max_delay"]]
         #TODO:考虑归一化
         return task_state
@@ -254,7 +256,7 @@ class Task( Service):
     def __lt__(self,other):
         return self.id < other.id
 
-    #统计打印函数
+    #TODO:统计打印函数
     @classmethod
     def print_Tasks_metric(cls,obj_id:int=0):
         lines = []

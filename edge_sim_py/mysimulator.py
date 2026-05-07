@@ -1,22 +1,13 @@
 # EdgeSimPy components
 from edge_sim_py import Simulator
 from edge_sim_py.activation_schedulers.my_scheduler import MyScheduler
-from edge_sim_py.component_manager import ComponentManager
 from edge_sim_py.components import *
 from edge_sim_py.activation_schedulers import *
-
 # Mesa modules
-from mesa import Model, Agent
+from mesa import Model,Agent
 
 # Python libraries
-import os
-import json
-import msgpack
 from typing import Callable
-from datetime import timedelta
-from urllib.parse import urlparse
-from urllib.request import urlopen
-
 import numpy as np
 import json
 

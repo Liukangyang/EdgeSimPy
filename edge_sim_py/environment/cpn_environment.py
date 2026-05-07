@@ -127,11 +127,6 @@ class CpnEnvironment:
                delay = service.trans_sustain_steps + service.comp_sustain_steps
                max_delay = service.max_delay
                # 时延奖励
-               # max_delay_standardization = (max_delay - 5)/(80-5)
-               # delay_standardization = (delay - 5)/(80-5)
-               # if(max_delay_standardization<0 or delay_standardization<0):
-               #     print("delay standardization error!")
-               # delay_reward = max_delay_standardization - delay_standardization
                delay_reward = max_delay - delay
 
                #成本奖励

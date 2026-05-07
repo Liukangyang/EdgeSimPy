@@ -1,9 +1,10 @@
-import heapq
 
 import numpy as np
 from mesa import Agent
 
+from edge_sim_py import CpnNode
 from edge_sim_py.component_manager import ComponentManager
+from edge_sim_py.task_schedulers import *
 import copy
 
 class Controller(ComponentManager,Agent):
@@ -39,25 +40,28 @@ class Controller(ComponentManager,Agent):
         return dictionary
 
 
-    def step(self,node,bw)->list:
+    def step(self,node=None)->list:
         if len(self.schedule_services)>0:
             self.task_count += len(self.schedule_services) # 累积总任务数量
-            if len(self.cpn_nodes)>0:
-                if self.policy=="random":
+            if self.policy=="dynamic":
+                    self.dynamic_policy(node,np.random.choice([1,2,5]))
+            elif self.policy=="random":
                     self.random_policy()
-                elif self.policy=="static":
-                    self.static_policy()
-                elif self.policy=="dynamic":
-                    self.dynamic_policy(node,bw)
-                else:
+                #TODO:其他静态策略
+            elif self.policy=="EFT":
+                    self.EFT_policy()
+            elif self.policy=="EDA":
+                    self.ECA_policy()
+            elif self.policy=="EES":
+                    self.ECS_policy()
+            else:
                     print("Unknown policy: " + self.policy)
-            else: print("No available cpn node available!")
         services = copy.deepcopy(self.schedule_services)
         self.schedule_services = [] #清空调度列表
         return services
 
 
-    ####### 随机策略
+    # 随机策略
     def random_policy(self):
         count = 0
         for  service in self.schedule_services:
@@ -79,42 +83,7 @@ class Controller(ComponentManager,Agent):
                  service.bw_demand = service.min_bw_demand
                  service.provision(target_server)
 
-    ####### 静态策略
-    def static_policy(self):
-        # 将每个任务分配给位于同一区域内的或距离最近的CPN节点
-        for service in self.schedule_services:
-            # 生成静态的带宽等级
-            service.min_bw_demand = 5
-            area_ID = service.area_ID
-
-            find = False
-            target_server = None
-            # 遍历算力节点
-            for cpn_node in self.cpn_nodes:
-                if cpn_node.area_ID == area_ID:
-                    find = True
-                    target_server = cpn_node
-                    break
-
-            #未找到同一区域内的，找距离最近的
-            if find == False:
-                _, link_delay = self.model.topology._shortest_path(origin=service.cpn_router, target=self.cpn_nodes[0])
-                target_server = self.cpn_nodes[0]
-                for i in range(1,len(self.cpn_nodes)):
-                    _,delay = self.model.topology._shortest_path(origin=service.cpn_router, target=self.cpn_nodes[i])
-                    if delay < link_delay:
-                        link_delay = delay
-                        target_server = self.cpn_nodes[i]
-                find = True
-
-            if find == True:
-                if target_server.has_capacity_to_host(service):
-                    # 部署并分配带宽资源
-                    service.bw_demand = service.min_bw_demand
-                    service.provision(target_server)
-                else:self.unsuccess_count += 1
-
-    ####### TODO：智能策略
+    #智能策略
     def dynamic_policy(self,node,bw):
         if type(node)==list and type(bw)==list:
             for i in range(len(self.schedule_services)):
@@ -139,4 +108,26 @@ class Controller(ComponentManager,Agent):
                     service.status = 'end'
                     self.unsuccess_count += 1
 
+    #EFT时延最小
+    def EFT_policy(self):
+        for service in self.schedule_services:
+            target_server = EFT(service,CpnNode.all())
+            if target_server is not None:
+                service.provision(target_server)
+            else: self.unsuccess_count += 1
 
+    #ECA时延与成本乘积最小
+    def ECA_policy(self):
+        for service in self.schedule_services:
+            target_server = ECA(service,CpnNode.all())
+            if target_server is not None:
+                service.provision(target_server)
+            else: self.unsuccess_count += 1
+
+    #ECS：成本最小
+    def ECS_policy(self):
+        for service in self.schedule_services:
+            target_server = ECS(service,CpnNode.all())
+            if target_server is not None:
+                service.provision(target_server)
+            else: self.unsuccess_count += 1
