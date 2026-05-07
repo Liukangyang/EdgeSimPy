@@ -46,20 +46,21 @@ def EFT(service,node_list)->object:
     min_delay=99999999
     min_node=None
     for node in node_list:
-        #计算完成时延
         #链路时延
         link_delay = 0
         if node.id <=16:
             link_delay = 1
         else:link_delay= 5
         #传输时间
-        trans_delay = service.memory_demand / node.bandwidth + link_delay
+        trans_delay = service.disk_demand / service.bw_demand + \
+                                   (len(service.path)-2) * (service.__class__.Mtu/(service.bw_demand*1e9)) + \
+                                   link_delay
 
         #等待时间
         waiting_delay = Waiting_Time(service,node)
 
         #计算总时间
-        comp_delay = service.cpu_demand / (node.mips/node.cpu)
+        comp_delay = service.flops_demand['cpu'] / (service.cpu_demand * node.cpu_flops)
 
         total_delay = trans_delay + waiting_delay + comp_delay
         if total_delay < min_delay and node.has_capacity_to_host(service):
@@ -71,11 +72,102 @@ def EFT(service,node_list)->object:
 def ECA(service,node_list)->object:
     min_product = 99999999
     min_node = None
+    for node in node_list:
+        #链路时延
+        link_delay = 0
+        if node.id <=16:
+            link_delay = 1
+        else:link_delay= 5
+        #传输时间
+        trans_delay = service.disk_demand / service.bw_demand + \
+                                   (len(service.path)-2) * (service.__class__.Mtu/(service.bw_demand*1e9)) + \
+                                   link_delay
+
+        #等待时间
+        waiting_delay = Waiting_Time(service,node)
+
+        #计算总时间
+        comp_delay = service.flops_demand['cpu'] / (service.cpu_demand * node.cpu_flops)
+        #总时延
+        total_delay = trans_delay + waiting_delay + comp_delay
+
+        #成本计算
+        #带宽总成本(1s为单位)
+        bw_price = service.model.params["cost"]["Pb"][str(service.bw_demand)] / 3600 * trans_delay
+        # 跨域则按照距离增加基础价格
+        if service.area_ID!=node.area_ID:
+            distance = 0
+            #获取传输路径的总距离
+            for i in range(len(service.path)-1):
+                link = service.model.topology[service.path[i]][service.path[i+1]]
+                distance += link["distance"]
+            #按照距离计费
+            scale = round(distance / 100,1)
+            bw_price *= (1+0.1*scale)
+
+        cpu_base = service.model.params["cost"]["cpu"]["base_price"]
+        Ccpu = service.model.params["cost"]["cpu"]["C"]
+        cpu_fbase = service.model.params["cost"]["cpu"]["fbase"]
+        cpu_price = cpu_base + Ccpu*service.cpu_demand*((node.cpu_flops-cpu_fbase)/cpu_fbase)
+
+        Gbase = min(service.model.params["cost"]["economy_vitality"])
+        Garea = service.model.params["cost"]["economy_vitality"][node.area_ID-1]
+        Vloc = Garea / Gbase
+        #计算资源成本 (单位时间计算成本*计算时间)
+        compute_price = cpu_price * Vloc * comp_delay
+
+        resource_cost = bw_price + compute_price
+
+        if total_delay * resource_cost < min_product:
+            min_node = node
+            min_product = total_delay * resource_cost
     return min_node
 
 #TODO:ECS策略-成本最小
 def ECS(service,node_list)->object:
-    min_E = 99999999
+    min_cost = 99999999
     min_node = None
+    for node in node_list:
+        #链路时延
+        link_delay = 0
+        if node.id <=16:
+            link_delay = 1
+        else:link_delay= 5
+        #传输时间
+        trans_delay = service.disk_demand / service.bw_demand + \
+                                   (len(service.path)-2) * (service.__class__.Mtu/(service.bw_demand*1e9)) + \
+                                   link_delay
+        #计算总时间
+        comp_delay = service.flops_demand['cpu'] / (service.cpu_demand * node.cpu_flops)
 
+        #成本计算
+        #带宽总成本(1s为单位)
+        bw_price = service.model.params["cost"]["Pb"][str(service.bw_demand)] / 3600 * trans_delay
+        # 跨域则按照距离增加基础价格
+        if service.area_ID!=node.area_ID:
+            distance = 0
+            #获取传输路径的总距离
+            for i in range(len(service.path)-1):
+                link = service.model.topology[service.path[i]][service.path[i+1]]
+                distance += link["distance"]
+            #按照距离计费
+            scale = round(distance / 100,1)
+            bw_price *= (1+0.1*scale)
+
+        cpu_base = service.model.params["cost"]["cpu"]["base_price"]
+        Ccpu = service.model.params["cost"]["cpu"]["C"]
+        cpu_fbase = service.model.params["cost"]["cpu"]["fbase"]
+        cpu_price = cpu_base + Ccpu*service.cpu_demand*((node.cpu_flops-cpu_fbase)/cpu_fbase)
+
+        Gbase = min(service.model.params["cost"]["economy_vitality"])
+        Garea = service.model.params["cost"]["economy_vitality"][node.area_ID-1]
+        Vloc = Garea / Gbase
+        #计算资源成本 (单位时间计算成本*计算时间)
+        compute_price = cpu_price * Vloc * comp_delay
+
+        resource_cost = bw_price + compute_price
+
+        if resource_cost < min_cost:
+            min_node = node
+            min_cost = resource_cost
     return min_node

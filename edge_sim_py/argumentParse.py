@@ -18,7 +18,7 @@ def parse_Args():
     #训练/测试迭代次数
     parser.add_argument('-e','--episodes',type=int, default=100)
 
-    #选择设
+    #选择设备
     parser.add_argument('-d','--device',type=str,default='cpu')
 
     #导入文件
