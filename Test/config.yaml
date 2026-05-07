@@ -10,12 +10,12 @@ task:
 
 user:
   mode: 1
-  task_num: 30
-  #mode: 1
-  #lambda_rate: 3
+  task_num: 1
+  max_tasks: 300
 
 #服务器参数
 server:
+  nums: 24
   label: ["Dell R740","IBM Dx360 M2","FUJTU TX1320 M3","Hewlett DL385 G5","Hewlett ML110 G4"]
   type: [1,2,3,4,5]
   frequency: [2.7,2.933,3.50,2.3,1.86] #单位Ghz
@@ -27,4 +27,56 @@ server:
   Pidle: [50,116,9,178,86]
 
 #网络训练参数
+ppo:
+  HIDDEN_SIZE: 100 # 隐藏层大小
+  MEMORY_CAPACITY: 10000 # 经验池大小
+  BATCH_SIZE: 64 #训练样本批大小
+  MEMORY_THRESHOLD: 256 # 经验池训练阈值
+  GAMMA: 0.98  # 折扣因子
+  EPS_START: 0.2  # 探索初始值
+  EPS_END: 0.1  # 探索率最终值
+  EPS_DECAY: 2000 # epsilon衰减系数
+  TAU: 0.05  # 用于软更新的 Tau（备用，这里不使用）
+  ACTOR_LR: 1e-5  # actor学习率
+  CRITIC_LR: 5e-5 #critic学习率
+  TARGET_UPDATE_FREQ: 20 # 目标网络更新频率
+  NUM_EPISODES: 550  # 训练迭代次数
+  MAX_STEPS_PER_EPISODE: 200  # 每次迭代的最大步数
+  LAMBDA: 0
+  EPOCHS: 50
+  EPS: 0.2
 
+
+double-ppo:
+  HIDDEN_SIZE: 100 # 隐藏层大小
+  MEMORY_CAPACITY: 10000 # 经验池大小
+  BATCH_SIZE: 64 #训练样本批大小
+  MEMORY_THRESHOLD: 256 # 经验池训练阈值
+  GAMMA: 0.98  # 折扣因子
+  EPS_START: 0.2  # 探索初始值
+  EPS_END: 0.1  # 探索率最终值
+  EPS_DECAY: 2000 # epsilon衰减系数
+  TAU: 0.05  # 用于软更新的 Tau（备用，这里不使用）
+  ACTOR1_LR: 1e-4  # actor1学习率
+  ACTOR2_LR: 2e-4  # actor2学习率
+  CRITIC_LR: 2e-5 #critic学习率
+  TARGET_UPDATE_FREQ: 20 # 目标网络更新频率
+  NUM_EPISODES: 550  # 训练迭代次数
+  MAX_STEPS_PER_EPISODE: 200  # 每次迭代的最大步数
+  LAMBDA: 0
+  EPOCHS: 50
+  EPS: 0.2
+
+dqn:
+    HIDDEN_SIZE: 100 # 隐藏层大小
+    MEMORY_CAPACITY: 100000 # 经验池大小
+    BATCH_SIZE: 64 #训练样本批大小
+    MEMORY_THRESHOLD: 256 # 经验池训练阈值
+    GAMMA: 0.98  # 折扣因子
+    EPS_START: 0.9  # 探索初始值
+    EPS_END: 0.01  # 探索率最终值
+    EPS_DECAY: 2000 # epsilon衰减系数
+    LR: 2e-5 #critic学习率
+    TARGET_UPDATE_FREQ: 40 # 目标网络更新频率
+    NUM_EPISODES: 550  # 训练迭代次数
+    MAX_STEPS_PER_EPISODE: 300  # 每次迭代的最大步数

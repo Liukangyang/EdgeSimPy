@@ -6,6 +6,7 @@ from edge_sim_py.components.network_flow import NetworkFlow
 from edge_sim_py.components.container_registry import ContainerRegistry
 from edge_sim_py.components.container_image import ContainerImage
 from edge_sim_py.components.container_layer import ContainerLayer
+from edge_sim_py.task_schedulers import *
 # Mesa modules
 from mesa import Agent
 
@@ -163,7 +164,7 @@ class CpnNode(EdgeServer):
             "Pactive": self.Pactive,
             "Pidle": self.Pidle,
             "Ucpu":self.Ucpu,
-            "Umemory":self.memory,
+            "Umemory":self.Umemory,
             "Ubw":self.Ubw,
             "E":self.total_E,
             "Services": [service.id for service in self.services],
@@ -261,7 +262,7 @@ class CpnNode(EdgeServer):
                         # incre_E += task.remain_comp_delay * (self.Ucpu*self.Pactive+self.Pidle)
                         task.remain_total_delay = task.remain_comp_delay = 0
                         task.cpu_demand = 0
-                        total_trans_delay
+
                     else: #当前时间间隔内无法完成
                         trans_delay = T-total_delay
                         task.cpu_demand -= self.mips/self.cpu * (T-total_delay)
@@ -295,16 +296,10 @@ class CpnNode(EdgeServer):
                #         num+=1
                #  self.Ucpu = num / self.cpu
         #TODO:时间间隔模拟结束，更新CPU、存储利用率、带宽利用率
-        self.Umemory = 0
-        # for task in self.exec_tasks:
-        #     self.Ucpu += (1 if task.cpu_demand > (self.mips / self.cpu) else task.cpu_demand / (self.mips / self.cpu))
-        # # 取平均
-        # self.Ucpu /= self.cpu
-        self.Umemory = self.memory_demand / self.memory
 
-        self.Ubw = self.total_trans_data / (self.bandwidth * self.total_T) #total_trans_data和bandwidth均以GB为单位
-        # #更新总能耗
-        # self.total_E += incre_E
+        self.Ucpu = len(self.exec_tasks) / self.cpu  # 占用核心比例
+        self.Umemory = self.memory_demand / self.memory
+        self.Ubw = self.total_trans_data / (self.bandwidth * self.total_T)  # total_trans_data和bandwidth均以GB为单位
 
     def has_capacity_to_host(self, service: object) -> bool:
         """Checks if the cpn node has enough free resources to host a given service.
@@ -338,20 +333,24 @@ class CpnNode(EdgeServer):
             metrics['cpu'],
             metrics['memory'],
             metrics['bandwidth'],
-            metrics['Ucpu'],
-            metrics['Umemory'],
-            metrics['Ubw'],
+            metrics['Ucpu']*100,
+            metrics['Umemory']*100,
+            metrics['Ubw']*100,
             metrics['MIPS'],
             metrics['Pactive'],
             metrics['Pidle'],
         ]
         # 预估下一个任务的时延
-        trans_delay = service.memory_demand / self.bandwidth #与带宽有关
-        compute_delay = service.cpu_demand / self.mips  #与性能有关
-        waiting_delay = sum([task.comp_sustain_steps for task in self.waiting_queue])  #与等待队列长度有关
-        predict_delay = trans_delay + compute_delay + waiting_delay
-        cpn_state.append(predict_delay)
-
+        if service is not None:
+            #链路时延
+            _,link_delay = self.model.topology._shortest_path(origin=service.router,target=self)
+            trans_delay = service.memory_demand / self.bandwidth + link_delay#与带宽有关
+            compute_delay = service.cpu_demand / (self.mips/self.cpu)  #与性能有关
+            waiting_delay = Waiting_Time(service,self) #与等待队列长度有关
+            predict_total_delay = trans_delay + compute_delay + waiting_delay
+            cpn_state.append(waiting_delay)
+        else:
+            cpn_state.append(0)
         return cpn_state
 
 

@@ -11,16 +11,7 @@ from edge_sim_py.components.task import Task
 from mesa import Agent
 
 # Python libraries
-import copy
-import networkx as nx
-
 import numpy as np
-
-import yaml
-
-with open('D:\学习文档资料\CPN仿真\edgesimpy\RL-PPO\Test\config.yaml', 'r',encoding='utf-8') as ymlfile:
-    config=yaml.safe_load(ymlfile)
-
 
 class MyUser(User):
     def __init__(self,obj_id: int = None,lambda_rate:float = 2,
@@ -86,8 +77,8 @@ class MyUser(User):
 
     def step(self):
         #按指定数量任务
-        if self.task_count >= 500 :
-            return 20 #不生成任务，则每隔20s更新环境
+        # if self.task_count >= 500:
+        #     return 50 #不生成任务，则每隔50s更新环境
         if self.generate_mode == 0:
             num = 10
             for i in range(num):

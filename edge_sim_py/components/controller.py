@@ -83,21 +83,13 @@ class Controller(ComponentManager,Agent):
         if type(node)==list:
             for i in range(len(self.schedule_services)):
                 service = self.schedule_services[i]
-                if node[i].has_capacity_to_host(service):
-                    service.provision(node[i])
-                else:
-                    service.status='end'
-                    self.unsuccess_count += 1
+                service.provision(node[i])
         else:
             for i in range(len(self.schedule_services)):
                 service = self.schedule_services[i]
-                #当前决策下是否具有足够的资源可供部署
-                if node.has_capacity_to_host(service):
-                    service.provision(node)
-                else:
-                    #没有足够资源则任务部署失败
-                    service.status = 'end'
-                    self.unsuccess_count += 1
+                service.provision(node)
+
+
 
     #EFT时延最小
     def EFT_policy(self):

@@ -64,6 +64,8 @@ class MySimulator(Simulator):
         self.total_delay=0
         self.total_E=0
         self.success_ratio=0
+        self.max_delay = 0
+
 
     def run_model(self):
         """Executes the simulation."""
@@ -129,8 +131,11 @@ class MySimulator(Simulator):
         #计算时延满足比例
         self.success_ratio = 0
         for task in Task.all():
-            if task.being_provisioned and task.delay < task.max_delay:
-                self.success_ratio += 1/len(Task.all())
+            if task.being_provisioned and task.delay <= task.max_delay:
+                self.success_ratio += 1/ len(Task.all())
+
+        #统计所有任务中的最大完成时延
+        self.max_delay = np.max([task.delay for task in Task.all()])
         # print(f"Success ratio(%): {self.success_ratio*100}%")
 
     #初始随机生成用户
@@ -158,7 +163,7 @@ class MySimulator(Simulator):
         MIPS=[604.8, 187.712, 56, 55.2, 14.88]  # 单位KMIPS
         RAM=[64, 48, 8, 16, 16]  # 单位GB
         Bandwidth=[1.5, 1, 1, 1, 0.1]  # 单位GB
-        Pactive=[12.4, 47.5, 5.1, 29.9, 11.7]
+        Pactive=[43.2, 47.5, 5.1, 29.9, 11.7]
         Pidle=[50, 116, 9, 178, 86]
         type = [1, 2, 3, 4, 5]
         index=None
@@ -216,10 +221,12 @@ class MySimulator(Simulator):
 
         self.schedule.steps=0
         self.schedule.time=0
+
+        self.total_delay=0
+        self.total_E=0
+        self.success_ratio=0
         # 每次重新迭代时需要将running重置为True
         self.running = True
-
-
 
     #从json文件中读取仿真参数设置
     @classmethod

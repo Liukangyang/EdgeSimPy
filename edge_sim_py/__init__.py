@@ -15,3 +15,5 @@ from .components import *
 from .dataset_generator import *
 
 from .mysimulator import MySimulator
+
+from .argumentParse import parse_args

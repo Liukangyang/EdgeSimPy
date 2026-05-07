@@ -49,6 +49,7 @@ class Task( Service):
        self.remain_comp_delay = 0 #剩余计算时间
        self.remain_trans_delay = 0 #剩余传输时间
        self.remain_memory_demand = self.memory_demand
+
        self.status = status
 
        self.router = router
@@ -146,7 +147,6 @@ class Task( Service):
         # 任务总时延
         self.delay = self.trans_sustain_steps + self.waiting_sustain_steps + self.comp_sustain_steps
 
-        # Ucpu =  1 if self.cpu_demand /  (target_server.mips/target_server.cpu) >1 else self.cpu_demand /  (target_server.mips/target_server.cpu)
 
         #预估能耗
         self.E = self.comp_sustain_steps * (target_server.Pactive / target_server.cpu)

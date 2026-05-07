@@ -4,7 +4,7 @@
                     "area_nums":3,
                     "user_nums":1
                 },
-                "max_tasks": 30,
+                "max_tasks": 300,
                 "max_steps": 50,
-                "policy": "EDA"
+                "policy": "dynamic"
 }

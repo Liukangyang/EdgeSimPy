@@ -6,7 +6,7 @@ from .net import PolicyNet,ValueNet,ActorNetwork, CriticNetwork
 from .rl_utils import *
 
 ''' PPO算法,采用截断方式 '''
-class PPO:
+class PPO2:
     def __init__(self, state_dim, hidden_dim, action_dim, actor_lr, critic_lr,
                  lmbda, epochs, eps, gamma, batch_size,device):
         self.actor = ActorNetwork(state_dim, hidden_dim, action_dim).to(device)
@@ -32,11 +32,16 @@ class PPO:
         self.start_critic_lr = self.critic_lr
         self.end_critic_lr = 2e-6
 
-    def take_action(self, state):
+    def take_action(self, state,memory):
         state = torch.tensor(state, dtype=torch.float).to(self.device)
         probs = self.actor(state)
         action_dist = torch.distributions.Categorical(probs)
         action = action_dist.sample() #采样获取动作
+
+        memory.states.append(state)  # Store state in memory
+        memory.actions.append(action)  # Store action in memory
+        memory.logprobs.append(action_dist.log_prob(action))  # Store log probability of the action
+
         return action.item()
 
     #学习率衰减机制
@@ -49,24 +54,18 @@ class PPO:
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters(),lr=self.actor_lr)
         self.critic_optimizer = torch.optim.Adam(self.critic.parameters(),lr=self.critic_lr)
 
-    def update(self, transition_dict):
-        #TODO:改成每次抽取样本进行计算
-        states = torch.tensor(transition_dict['states'],
-                              dtype=torch.float).to(self.device) #
-        actions = torch.tensor(transition_dict['actions']).view(-1, 1).to(
-            self.device)
-        rewards = torch.tensor(transition_dict['rewards'],
-                               dtype=torch.float).view(-1, 1).to(self.device)
-        next_states = torch.tensor(transition_dict['next_states'],
-                                   dtype=torch.float).to(self.device)
-        dones = torch.tensor(transition_dict['dones'],
-                             dtype=torch.float).view(-1, 1).to(self.device)
+    def update(self, memory):
+        # Convert memory to tensors
+        old_states = torch.stack(memory.states).to(self.device).detach()  # Convert states to tensor
+        next_states = torch.stack(memory.next_states).to(self.device).detach()  # Convert states to tensor
+        old_actions = torch.stack(memory.actions).to(self.device).detach()  # Convert actions to tensor
+        old_log_probs = torch.stack(memory.logprobs).to(self.device).detach()  # Convert log probabilities to tensor
+        rewards = torch.stack(memory.rewards).to(self.device).detach()
 
-        old_log_probs = torch.log(self.actor(states).gather(1, actions)).detach()
         # td_target = rewards + self.gamma * self.critic(next_states) * (1 - dones)
-        td_target = rewards + self.gamma * self.critic(next_states)
+        td_target = rewards + self.gamma * self.critic(next_states).detach().squeeze()
         #组装新的样本集合
-        sample_dict = {'states':states, 'actions':actions, 'old_log_probs':old_log_probs,'td_target':td_target}
+        sample_dict = {'states':old_states, 'actions':old_actions, 'old_log_probs':old_log_probs,'td_target':td_target}
         total_samples  = len(sample_dict['states'])
         mini_batch_size = min(self.batch_size, total_samples)
 
@@ -78,25 +77,28 @@ class PPO:
             sample_actions = sample_dict['actions'][indices]
             sample_old_log_probs = sample_dict['old_log_probs'][indices]
             sample_td_target = sample_dict['td_target'][indices]
-            # advantage需要每次重新计算
-            td_delta = sample_td_target - self.critic(sample_states)  #
+
+            td_delta = sample_td_target - self.critic(sample_states).detach().squeeze()  #
             advantage = compute_advantage(self.gamma, self.lmbda, td_delta.cpu()).to(self.device)  #
 
             #计算策略熵和log_probs
-            # action_probs = self.actor(sample_states)
-            # dist = Categorical(probs=action_probs)
-            # #TODO:使用dist获取log_prob和entropy时需扩充维度
-            # log_probs = dist.log_prob(sample_actions.squeeze()).unsqueeze(-1)
-            # entropy = dist.entropy().unsqueeze(-1) # Compute entropy for exploration
-            log_probs,entropy = self.actor.evaluate(sample_states,sample_actions)
+            #TODO:
+            action_probs = self.actor(sample_states)
+            dist = Categorical(probs = action_probs)
+            #TODO:sample_actions维度需为(样本数量,)，即必须是一维的
+            log_probs = dist.log_prob(sample_actions)
+            entropy = dist.entropy() # Compute entropy for exploration
+            # log_probs = torch.log(self.actor(sample_states).gather(1, sample_actions))
 
             ratio = torch.exp(log_probs - sample_old_log_probs)
             surr1 = ratio * advantage
             surr2 = torch.clamp(ratio, 1 - self.eps,1 + self.eps) * advantage  # 截断
-            actor_loss =  - torch.mean(torch.min(surr1, surr2)) - self.entropy_coef * entropy.mean()
-            critic_loss = torch.mean( F.mse_loss(self.critic(sample_states), sample_td_target.detach()))
-
-            total_actor_loss += actor_loss.item()
+            # actor_loss =  - torch.mean(torch.min(surr1, surr2)) - self.entropy_coef * entropy.mean()
+            actor_loss = - torch.mean(torch.min(surr1, surr2))
+            critic_loss = torch.mean(
+                F.mse_loss(self.critic(sample_states).squeeze(), sample_td_target))
+            #
+            total_actor_loss += actor_loss
             actor_loss.backward()
             critic_loss.backward()
             self.actor_optimizer.step()
@@ -105,8 +107,8 @@ class PPO:
             self.critic_optimizer.zero_grad()
 
         self.steps += 1
-        # self.lr_decay()
         return total_actor_loss / self.epochs
+
 
     # 保存模型
     def save_model(self, file:str):

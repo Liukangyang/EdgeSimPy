@@ -1,7 +1,7 @@
 from copy import deepcopy
 import heapq
 
-def Waiting_Time(service,node)->object:
+def Waiting_Time(service,node)->float:
     total_wait_time = 0
     if len(node.exec_tasks) < node.max_tasks:
         total_wait_time = 0
@@ -45,7 +45,7 @@ def EFT(service,node_list)->object:
         link_delay = 0
         if node.id <=16:
             link_delay = 1
-        else:link_delay= 10
+        else:link_delay= 5
         #传输时间
         trans_delay = service.memory_demand / node.bandwidth + link_delay
 
@@ -71,7 +71,7 @@ def EDA(service,node_list)->object:
         link_delay = 0
         if node.id <=16:
             link_delay = 1
-        else:link_delay= 10
+        else:link_delay= 5
         # 传输时间
         trans_delay = service.memory_demand / node.bandwidth + link_delay
 
@@ -86,8 +86,9 @@ def EDA(service,node_list)->object:
         # Ucpu = comp_delay / (comp_delay + trans_delay)
         # Ucpu = 1 if service.cpu_demand / (node.mips/node.cpu) > 1 else service.cpu_demand / (node.mips/node.cpu)
         # Ucpu = 1 if len(node.exec_tasks)>=node.max_tasks else len(node.exec_tasks)/node.max_tasks
-        # E = (comp_delay+waiting_delay) * (Ucpu * node.Pactive + node.Pidle)
-        E = (comp_delay) * (node.Pactive / node.cpu)
+        Ucpu = min(node.Ucpu + 1/node.cpu, 1)
+        E = (comp_delay) * (Ucpu * node.Pactive + node.Pidle)
+        # E = (comp_delay) * (node.Pactive / node.cpu)
         product = total_delay * E
         if product < min_product and node.has_capacity_to_host(service):
             min_node = node
@@ -107,9 +108,10 @@ def EES(service,node_list)->object:
         #计算能耗
         # Ucpu = node.Ucpu + service.cpu_demand / (node.mips/node.cpu)/node.cpu
         # Ucpu =  1 if service.cpu_demand /  (node.mips/node.cpu) >1 else service.cpu_demand /  (node.mips/node.cpu)
-        Ucpu = 1 if len(node.exec_tasks)>=node.max_tasks else len(node.exec_tasks)/node.max_tasks
         # E = (comp_delay+waiting_delay) * (Ucpu * node.Pactive + node.Pidle)
-        E = (comp_delay) * (node.Pactive / node.cpu)
+        Ucpu = min(node.Ucpu + 1/node.cpu, 1)
+        E = (comp_delay) * (Ucpu * node.Pactive + node.Pidle)
+        # E = (comp_delay) * (node.Pactive / node.cpu)
         if E < min_E and node.has_capacity_to_host(service):
             min_node = node
             min_E = E
