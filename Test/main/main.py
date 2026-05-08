@@ -11,6 +11,7 @@ project_dir = os.path.abspath(os.path.join(current_dir, ".."))
 root_dir = os.path.abspath(os.path.join(project_dir, ".."))
 sys.path.append(root_dir)
 
+
 from edge_sim_py.environments import CpnEnvironment
 from edge_sim_py.drl_model import PPO, DoublePPO, DQN
 import numpy as np
@@ -24,12 +25,12 @@ from edge_sim_py.components import *
 from edge_sim_py import MySimulator
 from tqdm import tqdm
 from edge_sim_py.drl_model.rl_utils import *
-from edge_sim_py.argumentParse import parse_args
+from edge_sim_py.argumentParse import parse_Args
 
 
 np.random.seed(0)
 #先导入参数并解析
-args = parse_args()
+args = parse_Args()
 config_file = args.configfile
 topo_file = args.topofile
 params_file = args.paramsfile
@@ -37,7 +38,9 @@ device = torch.device(args.device)
 EPISODES = args.episodes
 model  = args.model
 strategy = args.strategy
+max_tasks = args.max_tasks
 if_train = args.train
+if_test = args.test
 
 model_file = args.modelparams
 reward_file = args.reward
@@ -49,7 +52,7 @@ with open(args.configfile, 'r',encoding='utf-8') as f:
 
 #创建仿真器
 def Stop_func() -> bool:
-    return all(user.task_count > int(config['user']['max_tasks']) for user in MyUser.all())
+    return all(user.task_count > max_tasks for user in MyUser.all())
 
 params = MySimulator.get_ParamsFromFile(input_file=params_file)
 
@@ -61,7 +64,6 @@ simulator = MySimulator(
 #设置策略
 simulator.policy = strategy
 simulator.setUp(input_file=topo_file)
-print(f"policy:{simulator.policy}")
 
 #构建环境
 Cpn_env = CpnEnvironment(num_task=config['user']['task_num'],num_node=config['server']['nums'],
@@ -71,8 +73,6 @@ state_dim = Cpn_env.state_dim
 #动作空间维度
 action_dim = Cpn_env.action_dim
 
-
-#根据类型构建构建智能体
 match model:
     case 'none':
         agent = None
@@ -100,7 +100,7 @@ def train(model_file,reward_file,loss_file,agent,online:bool = False):
     episode_rewards_custom = []
     episode_losses_custom = []
     num_episodes = EPISODES
-    dirname =  'Test/'
+    dirname = 'Test/'
     for i in range(50):
         with tqdm(total=int(num_episodes / 50), desc='Iteration %d' % i) as pbar:
             for i_episode in range(int(num_episodes/50)):
@@ -151,10 +151,10 @@ def train(model_file,reward_file,loss_file,agent,online:bool = False):
                 pbar.update(1)
                 # 每 10 次迭代打印一次进度
                 # TODO：改用tdqm显示,每5次迭代更新一次最近5次累计奖励的平均值
-                if (i_episode + 1) % 5 == 0:
+                if (i_episode + 1) % 1 == 0:
                     pbar.set_postfix({'episode': '%d' % (num_episodes / 50 * i + i_episode + 1),
-                                      'return': '%.3f' % np.mean(episode_rewards_custom[-5:]),
-                                      'loss': '%.3f' % np.mean(episode_losses_custom[-5:])})
+                                      'return': '%.3f' % np.mean(episode_rewards_custom[-1:]),
+                                      'loss': '%.3f' % np.mean(episode_losses_custom[-1:])})
                 #TODO:保存数据
                 if int(num_episodes / 50 * i + i_episode + 1) % 50 == 0:
                     agent.save_model(dirname+model_file)
@@ -164,18 +164,21 @@ def train(model_file,reward_file,loss_file,agent,online:bool = False):
                         pickle.dump(episode_losses_custom, f)
 
 #测试函数
-def test(strategy,agent:object=None):
+def test(strategy,model_dict_file:str='',agent:object=None):
     episode_total_delay = []
     episode_total_E = []
     episode_success_rate = []
     episode_max_delay = []
+    print(f"策略为:{strategy}")
+    print("开始测试......")
+    if strategy == 'DRL':
+        print("加载DRL模型参数......")
+        agent.load_model(model_dict_file)
     for i_episode in range(EPISODES):
         np.random.seed(i_episode)
         random.seed(i_episode)
         torch.random.manual_seed(i_episode)
-
-        #TODO：静态策略与动态策略的主要区别
-        if strategy != "dynamic": #静态策略
+        if strategy != "DRL": #静态策略
             # 每次重置环境
             simulator.reset()
             while simulator.running:
@@ -195,7 +198,8 @@ def test(strategy,agent:object=None):
                 # 步数+1
                 simulator.schedule.steps += 1
                 simulator.running = not simulator.stopping_criterion()
-        else:#'dynamic'
+        else:#'DRL'
+            #导入训练好的模型参数
             # 重置环境
             state = Cpn_env.reset()
             done = False
@@ -232,12 +236,13 @@ def test(strategy,agent:object=None):
     print("avg_E(J):", avg_E)
     print("avg_success_rate(%):", round(avg_success_rate * 100, 2))
     print("avg_max_delay(s):", round(avg_max_delay, 2))
-    pass
 
 if __name__ == '__main__':
     #训练 or 测试
-    if strategy == "dynamic":
+    if if_train:
         train(model_file='model/'+model+'/'+model_file,reward_file='result/'+model+'/reward/'+reward_file,
               loss_file='result/'+model+'/loss/'+loss_file,agent=agent,online = True if model=='ppo' else False)
+    elif if_test:
+        test(strategy,args.model_dict_file,agent)
     else:
-        test(strategy,agent)
+        print("No work!")

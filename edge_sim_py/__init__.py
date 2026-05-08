@@ -16,4 +16,4 @@ from .dataset_generator import *
 
 from .mysimulator import MySimulator
 
-from .argumentParse import parse_args
+from .argumentParse import parse_Args
